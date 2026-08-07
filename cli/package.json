@@ -1,0 +1,20 @@
+{
+  "name": "minimal-harness-kit",
+  "version": "0.1.0",
+  "description": "Minimal Harness Kit CLI (mhk) — placeholder; real commands coming soon.",
+  "type": "module",
+  "bin": {
+    "mhk": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

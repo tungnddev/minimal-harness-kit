@@ -1,0 +1,6 @@
+{
+  "name": "mhk",
+  "version": "0.1.0",
+  "description": "Minimal Harness Kit — onboard a repo onto Claude Code with project-specific CLAUDE.md, scoped rules, and hard constraints; no generic-rule bloat.",
+  "author": { "name": "tungnd" }
+}

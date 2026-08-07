@@ -1,0 +1,11 @@
+{
+  "name": "minimal-harness-kit",
+  "owner": { "name": "tungnd" },
+  "plugins": [
+    {
+      "name": "mhk",
+      "source": "./plugins/claude",
+      "description": "Minimal Harness Kit — project-specific CLAUDE.md, scoped rules, and hard constraints for a single repo."
+    }
+  ]
+}

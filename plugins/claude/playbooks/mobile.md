@@ -1,0 +1,18 @@
+# Playbook: Mobile
+
+Applies when the repo's `kind: mobile`, any framework (Flutter, React Native, native iOS/Android, Kotlin Multiplatform, etc.).
+
+Categories to investigate — not rules to copy in. Record a candidate only if it clears the delta bar in `repo-cartographer.md` §2. A category with nothing distinctive going on contributes no rule at all — that's expected, not a gap.
+
+- **Architecture & folder organization** — feature-based vs layer-based vs no clean-architecture separation at all. Check consistency across features/modules, not just one.
+- **State management + DI wiring** — whichever pattern is actually used (Bloc/Riverpod/Provider for Flutter, Redux/MobX/Context for React Native, MVVM/Coordinator for native) and how it's instantiated/injected. Worth recording if there's a specific base class or wiring convention.
+- **Navigation / routing** — which approach, and any nonstandard guard/redirect/deep-linking pattern.
+- **Localization / i18n** — which mechanism (`gen-l10n`/`easy_localization` for Flutter, `i18next`/`react-intl` for React Native, platform-native catalogs) and the exact call convention actually used. Confirm no hardcoded UI strings by grepping for string literals inside common UI-construction calls.
+- **Theming / design tokens (measure each axis separately)** — text styles, colors, and spacing are independent axes that often have *opposite* adherence, so probe each as its own ratio rather than one lumped "is theming followed?" verdict: grep `textTheme.<style>` vs raw `TextStyle(`, the color-token/`UIColor` file vs inline `Color(0x…)` literals, and shared spacing constants vs magic numbers. Emit a discipline rule only for the axes that actually clear the >70% bar (per the reuse-discipline note in `repo-cartographer.md` §3); a text-style convention followed >90% of the time must not be suppressed just because colors are inlined, or vice-versa. Axes below the bar become at most a soft "intended direction, not enforced" note.
+- **Assets & images** — naming/organization convention, density/resolution-variant handling, and whether they're declared centrally vs scattered.
+- **Code generation / build tooling** — whichever generators run (e.g. `build_runner` + `json_serializable`/`freezed` for Flutter, native codegen for GraphQL/protobuf clients) and the "must regenerate after changing X" gotcha for each.
+- **Platform-specific handling** — iOS vs Android divergence points: permissions, native-module/platform-channel boundaries, platform-specific UI adjustments — worth recording if there's a consistent convention for where this logic lives.
+- **Testing** — fakes/stubs vs mocks preference actually followed, and whether test folder structure mirrors the app's source layout.
+- **Reuse surface / shared API catalog** (→ scoped catalog rule + CLAUDE.md signpost, per `repo-cartographer.md` §3) — the design-system widgets, shared dialogs, base classes, and helper extensions an LLM would otherwise reinvent: e.g. the repo's app-bar/button/dialog/list widgets, `context`/`DateTime`/`num` extensions, base Bloc/state classes, the shared HTTP client wrapper. Capture the ones actually reused across features as a `name | purpose | where` lookup (names and locations, not code bodies). If the repo has more than one shared package (e.g. a design-system `ui` package and a `core`/infra package), emit one catalog per package/consumption boundary — each scoped to where that surface is used — not a single merged file. This is reference, not a constraint.
+
+Explicitly out of scope, regardless of confidence: generic language style (naming case, line length, standard OOP/FP idioms) — universal language convention already known, not project-specific.
