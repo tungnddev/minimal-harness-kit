@@ -4,6 +4,8 @@ Only create one of these for a rule that occurs at scattered paths across the re
 
 Unlike CLAUDE.md, don't wrap this in `<!-- BEGIN/END: ai-guide -->` markers — frontmatter must be the literal first thing in the file for `paths:` to be recognized, and a marker comment above it would break that. These files are small and single-topic anyway, so propose the whole file each time instead of merging inside a managed block.
 
+**Ownership marker (last line).** Every mhk-generated rules file ends with a `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` comment. It sits at the *end* so it never displaces the leading `paths:` frontmatter, and it's how `/mhk:rules` and `/mhk:doctor` tell a file mhk owns from one a human hand-wrote: mhk only ever updates or removes a file that carries this marker, and never touches a rules file without it. Keep the marker on any file `/mhk:rules-add` creates too.
+
 ---
 paths:
   - "**/migrations/**"
@@ -12,6 +14,8 @@ paths:
 # Migrations
 
 Migrations are one-way. Never hand-edit a migration file that has already been applied to any environment; write a new migration instead. [confidence: high — evidence: no down() implementations anywhere in migrations/, CONTRIBUTING.md §3]
+
+<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->
 
 Keep each rules file scoped to one topic and short — a handful of lines, not a reference doc. If a topic grows past ~30 lines, it's probably several topics; split it rather than letting one file cover unrelated conventions.
 

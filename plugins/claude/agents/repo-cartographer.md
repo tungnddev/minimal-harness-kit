@@ -95,6 +95,32 @@ Separately, flag candidates that are "never touch this" rather than "prefer this
 
 Only surface a hard-constraint candidate when violating it would be a real correctness problem (regenerated file gets overwritten and silently discarded, a one-way migration gets edited after already running elsewhere) — not for ordinary style preferences, which stay soft (CLAUDE.md) so they can be overridden when there's a legitimate reason to.
 
+## 6. Exemplar candidates (canonical instances of repeated composite archetypes)
+
+Some project knowledge isn't a constraint or a shared API — it's *the shape of a change*. When a repo builds the same **multi-file composite** over and over (a feature = controllers + services + repositories + routes; a screen = page + bloc; a module), the fastest way to make new code match is to point at one existing instance and say "mirror this." An LLM copying a real, current file inherits dozens of micro-conventions no rule list could enumerate — and the pointer can't drift, because it resolves to live code (same reason §3 catalogs point at locations instead of pasting bodies).
+
+Emit an exemplar ONLY when it clears the **compression test**, so it never duplicates a rule:
+
+- **Multi-file / incompressible only.** If the convention compresses to a short invariant a reader needs nothing else for (`@JsonSerializable` models, `<Entity>VM` naming, a one-file mapper), it is a **rule (§2), not an exemplar** — emitting both is duplication. Reserve exemplars for archetypes whose value is the assembled shape across several files/wiring points, which prose can't carry.
+- **Dedup against §2.** Before emitting, check whether a rule already constrains this archetype. An exemplar must add what a rule can't — the *canonical instance to copy* — not restate the rule.
+- **Repeated.** The archetype occurs enough times to have a canonical shape (grep/glob the instances), not a one-off.
+
+For each archetype that qualifies:
+
+- **Signature** — the invariants that define membership: the fileset, the base class/registration it must have, the naming. Split into `required` (must match) and `advisory` (common but optional). This is what lets you find all instances and detect variants.
+- **Population + canonical instance** — glob the instances; pick the canonical one by **evidence, never by name**: completeness (the most complete example), prevalence (matches the dominant shape), and *actual usage/wiring* (registered and reached in the real entrypoint). A `_v2`/`_new`/`_old` suffix is **not** evidence of canonicality — a "v2" may be a coexisting variant, not a replacement; confirm by what the code actually routes to.
+- **Invisible wiring** — the one or two touchpoints a new instance needs that are **not visible from the exemplar file itself** (register the route up the module chain; add to a DI/registry list). This is the only detail worth writing down; everything visible in the exemplar is obtained by reading it.
+- A **CLAUDE.md pointer** (always-loaded, one line): `mirror <path>` + the invisible-wiring clause. The shape detail is never copied into the pointer — it lives in the exemplar file, read on demand when a new instance is built.
+
+### Divergence — when there is more than one shape
+
+The prevalence bars in §2/§3 measure *one* pattern against noise. Exemplar detection must also notice when the instances form **more than one cluster** — the same archetype built two different ways (different eras or devs, an AI generator, or a genuine per-audience/per-variant split). Cluster the population by signature and compare cluster sizes:
+
+- **One cluster clearly dominates** on real evidence → emit it as the single canonical exemplar; a small stale minority may be flagged as an **anti-exemplar** ("don't imitate — legacy shape").
+- **Clusters compete** (near-tied, or split along an axis like audience/module) → do **not** auto-pick. Surface the divergence for a **targeted confirmation**: list each cluster with its member count, a representative path, and any provenance signal (git-author clustering, missing wiring, generated-file markers), so the calling command can ask the user which is canonical — or whether both are intentional and each gets its own scoped exemplar.
+
+Never resolve a divergence by naming convention alone. The aggregate-adherence number can hide a split — "78% follow the skeleton" can really be *7 instances in shape A + 2 in shape B* — so **cluster before concluding**, or a minority shape gets silently mischaracterized as a high-confidence uniform rule.
+
 ## Output
 
 Return one structured report, not files:
@@ -122,6 +148,13 @@ Cross-cutting-by-filetype candidates:
 
 Hard-constraint candidates:
 - pattern: <permissions.deny glob> | reason: <...> | (evidence: <...>)
+
+Exemplar candidates:
+- archetype: <name> | canonical: <path to mirror> | signature: <required fileset/base/registration>
+  invisible wiring: <touchpoint(s) not visible in the exemplar file>
+  signpost (CLAUDE.md): "mirror <path> — <wiring clause>"
+  population: <n instances> | (evidence: <...>, confidence: <...>)
+  divergence: <none | competing clusters: A=<n> (<repr>), B=<n> (<repr>) → needs user confirmation>
 ```
 
 You never write files yourself — the calling command turns this into a CLAUDE.md diff and gets human approval.
