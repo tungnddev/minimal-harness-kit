@@ -1,0 +1,1 @@
+Describe enforcement only as it actually exists: write "is denied" or "is blocked" only when the matching native restriction has been validated using [permissions.md](../references/permissions.md). Otherwise state the instruction without claiming enforcement.

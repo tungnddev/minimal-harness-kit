@@ -1,0 +1,5 @@
+interface:
+  display_name: "mhk rules"
+  short_description: "Generate verified repository rules for Codex"
+policy:
+  allow_implicit_invocation: false

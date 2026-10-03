@@ -1,0 +1,12 @@
+---
+name: mhk-rules-add
+description: Verify and add a user-supplied project rule to AGENTS.md or .mhk/rules. Use only when explicitly invoked; no full repository scan.
+---
+
+# Add a Codex project rule
+
+Use the rule text supplied with `$mhk-rules-add`. Read root `AGENTS.md`, any `AGENTS.override.md`, and relevant `.mhk/rules/` documents. Check selected instructions on the path to the affected work: an override can hide the root index or supersede the rule. Report the conflict without editing overrides or claiming the new rule will be loaded.
+
+{{> rules_add_workflow }}
+
+Keep `CLAUDE.md`, `.claude/`, `.codex/`, and `.mhk/memory/` unchanged. Never read personal memory stores. `.mhk/rules/` documents are retrieved through the root index, not loaded automatically by their paths. If enforcement is requested, explain that it requires the separate native-configuration review in `$mhk-rules`; do not silently start it.

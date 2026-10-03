@@ -1,0 +1,1 @@
+Describe enforcement only as it actually exists: write "is denied" or "is blocked" only when a matching `permissions.deny` entry in `.claude/settings.json` covers the claimed tool operation. Otherwise state the instruction without claiming enforcement.

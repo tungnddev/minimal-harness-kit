@@ -1,0 +1,24 @@
+{
+  "name": "mhk",
+  "version": "0.1.0",
+  "description": "Minimal Harness Kit for Codex: verified project rules, shared team memory, and native permission proposals.",
+  "author": {
+    "name": "tungnd"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Minimal Harness Kit",
+    "shortDescription": "Codex repository rules and shared team memory",
+    "longDescription": "Generate an indexed Codex harness from verified Claude mhk rules or a fresh scan, verify and add one supplied project rule, or set up the shared team memory that Codex offers to fill as you work. A read-only doctor reports what is set up, broken, or stale. Native permission proposals are reviewed separately.",
+    "developerName": "tungnd",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $mhk-rules to generate Codex guidance for this repository."
+    ]
+  }
+}

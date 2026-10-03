@@ -1,0 +1,21 @@
+---
+name: mhk-doctor
+description: Fast, read-only health check of a repository's mhk rules and shared team memory for Codex — what is set up, what is broken or stale, and which skill fixes it. Use only when explicitly invoked.
+---
+
+# mhk doctor for Codex
+
+Give a fast, **read-only** overview of the mhk layers in one repository: the path given with the invocation, otherwise the current Git repository. Diagnose and route; every fix belongs to another skill that the user runs deliberately. Do not run the repo-cartographer method: the deep scan belongs to `$mhk-rules`. Read-only is an instruction here, not a tool-enforced sandbox.
+
+{{> doctor_workflow }}
+
+## Codex specifics
+
+- **Overrides.** A root `AGENTS.override.md` replaces `AGENTS.md`, so neither mhk block loads → `✗`. mhk never edits or deletes overrides, so resolving it is the user's call. An override in a deeper directory replaces only that directory's `AGENTS.md` → `·`.
+- **Routing.** Codex reaches `.mhk/rules/` documents only through the index rows in the rules block. An owned topic with no index row is never read → `✗`. A row linking to a missing file → `✗`.
+- **Scope.** `paths:` is scope metadata in Codex, not a loading trigger; a glob that matches nothing means its index row's scope is stale.
+- **Size.** A rules block beyond ~80 lines → `!`. `AGENTS.md` approaching the host's `project_doc_max_bytes` limit → `!`.
+- **Native restrictions.** If `.codex/config.toml` exists, report in one `·` line whether it carries mhk-owned entries (marked by in-band ownership comments). Doctor does not evaluate effective configuration or claim enforcement.
+- **Memory block.** Compare with the exact block, begin marker to end marker, in [MEMORY_BLOCK.md](../mhk-memory/assets/MEMORY_BLOCK.md).
+- **Personal memory.** Never read Codex's own memories or any personal memory store; Codex has no unshared-fact check.
+- **Claude side.** Detect it without checking it: if `CLAUDE.md` has an mhk rules block, add a **Claude Code** section with one `·` line: Claude rules present; check them with `/mhk:doctor` in Claude Code. If Claude has mhk rules and `AGENTS.md` has no rules block, add that `$mhk-rules migrate` imports and verifies them. The memory store is shared, so the Memory section already covers both platforms.

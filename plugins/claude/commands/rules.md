@@ -1,32 +1,99 @@
 ---
-description: Scan this repo and converge its CLAUDE.md rules, scoped .claude/rules/* catalogs, exemplar pointers, and permissions.deny hard constraints to match the code — creating them on a fresh repo and proposing only what changed on a repo that already has them. Project-specific rules only; approval-gated.
-argument-hint: "[path]"
+description: Generate or update Claude project rules from a focused repository scan or verified Codex MHK guidance. Review content and native restrictions before writing.
+argument-hint: "[migrate|fresh] [path]"
+disable-model-invocation: true
 ---
 
-`/mhk:rules` owns the **derived layer** — everything mhk can infer from a code scan: the CLAUDE.md managed block, the scoped `.claude/rules/*.md` files, the exemplar pointers, and the `permissions.deny` hard constraints. It is **idempotent**: run it on a fresh repo and it proposes the whole layer; run it again after the code moves and it proposes only what drifted. There is no separate create-vs-update command and nothing to initialize first.
+<!-- Generated from adapters/claude/package/commands/rules.md.tmpl; edit core/ or adapters/ and run npm run build:plugins. -->
 
-Use the `repo-cartographer` subagent to scan `${ARGUMENTS:-the current repository}` read-only and return its structured report: repo fingerprint, delta-rule candidates with evidence, reuse-surface catalog candidates, cross-cutting-by-filetype candidates, hard-constraint candidates, and exemplar candidates (each with any competing-shape divergence flagged for confirmation).
+`/mhk:rules` owns the **derived layer** — selected guidance supported by code and current project policy: the CLAUDE.md rules block, the scoped `.claude/rules/*.md` files, the exemplar pointers, and the `permissions.deny` hard constraints. It is **idempotent**: run it on a fresh repo and it proposes the whole layer; run it again and it proposes evidence-backed corrections or concrete audit improvements; an unchanged, already-audited harness produces no diff. There is no separate create-vs-update command and nothing to initialize first.
+
+Parse an optional `migrate` or `fresh` mode and target path from `$ARGUMENTS`; default to the current repository. Start with a shallow inventory of Claude guidance and whether root `AGENTS.md` or `.mhk/rules/` contains MHK output. Choose the source before scanning code:
+
+| Situation | Behavior |
+| --- | --- |
+| Explicit `migrate` | Read `${CLAUDE_PLUGIN_ROOT}/references/codex-migration.md`; verify and import Codex guidance. If absent, report it. |
+| Explicit `fresh` | Discover from repository sources while preserving existing Claude output and human policy. Do not import Codex output. |
+| Owned Claude guidance exists, no mode | Recheck and update it; do not automatically import Codex changes. |
+| Only Codex MHK guidance exists | Ask once: **Migrate and verify Codex rules (recommended)** or **Fresh scan**. Wait for the choice. |
+| Neither platform has owned guidance | Fresh scan, retaining human guidance as policy/context. |
+
+A mode choice is not approval to write. For fresh scans and ordinary reruns, invoke `repo-cartographer` read-only with the inventory and permitted sources below. Migration follows its selected source inventory and targeted verification instead of a full discovery scan. Keep `AGENTS.md`, overrides, `.codex/`, and `.mhk/` unchanged in every mode.
 
 This command always operates on exactly one repo — a single service, app, or library. There is no monorepo fan-out; one repo gets one CLAUDE.md.
 
 ## What mhk owns vs what it must never touch
 
-mhk manages **only what it can prove it created** — everything else is the user's and is preserved untouched. Ownership is signalled **in-band** (it travels with the file), so there is no side manifest or cache to keep honest:
+mhk manages **only what it can prove it created** — everything else is the user's and is preserved untouched. Ownership is signalled **in-band** (it travels with the file), so there is no side manifest or cache to keep honest.
 
-- **CLAUDE.md** — mhk owns only the block between `<!-- BEGIN: ai-guide -->` and `<!-- END: ai-guide -->`. Everything outside the markers is human-authored: never read it as state to regenerate, and never modify it. If a CLAUDE.md exists with no markers, it was hand-written — add the managed block *alongside* the user's content (don't merge into it, don't overwrite the file).
+### mhk blocks in `CLAUDE.md`
+
+mhk writes to `CLAUDE.md` only inside its own marked blocks, and each block belongs to exactly one workflow:
+
+| Block | Markers | Owner |
+| --- | --- | --- |
+| Rules | `<!-- mhk:rules:begin -->` … `<!-- mhk:rules:end -->` | `/mhk:rules` |
+| Memory | `<!-- mhk:memory:begin -->` … `<!-- mhk:memory:end -->` | `/mhk:memory` |
+
+- Write only your own block. Read the other mhk blocks as context, so you neither duplicate nor contradict them; never edit, reorder, or adopt their content.
+- Everything outside mhk blocks is human-authored: preserve it, and read it as policy/context.
+- Blocks keep this order: rules, then memory. Place a missing block after any mhk block that comes before it in this order, otherwise at the end of the file. Create `CLAUDE.md` if it does not exist.
+- Validate your block's markers before writing. A duplicate, mixed, or unmatched pair is a conflict: stop and ask.
+- The rules block's older markers — `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` and `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` — still mark the rules block. Only the full rules workflow upgrades them, as a separately labelled line in its approved diff.
+
+- **CLAUDE.md** — this command owns only the rules block. Never read human content or other mhk blocks as state to regenerate, and never modify them. If CLAUDE.md has no rules block, add one *alongside* the existing content (don't merge into it, don't overwrite the file).
 - **Scoped `.claude/rules/*.md`** — a file mhk generates carries a trailing `<!-- mhk:generated -->` provenance marker (see `${CLAUDE_PLUGIN_ROOT}/templates/RULES_TEMPLATE.md`). Only propose changes to files that carry it. A rules file *without* the marker was hand-written: leave it alone, never overwrite or delete it.
+- **Legacy markers** — the rules block's older markers (above) and the `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` rules-file trailer still mark mhk-owned content. Whenever you propose changes to such a file, include upgrading its markers to the current `<!-- mhk:rules:begin -->` / `<!-- mhk:rules:end -->` and `<!-- mhk:generated -->` as a separately labelled line in the diff — never rewrite markers silently or without approval. A block must open and close with the same generation of marker; a mixed or unmatched pair is malformed — stop and ask.
 - **`permissions.deny`** — only ever *append* entries; never remove one you didn't add, and never touch any other key in `.claude/settings.json`.
 
-Then, using the cartographer report:
+## Inventory before scanning
 
-1. **Draft or update the CLAUDE.md managed block.** See `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE_TEMPLATE.md` for target shape and length (keep it under ~80 lines). On a fresh repo, write the block whole. On a repo that already has it, diff the fresh scan against what's there and propose **only the lines that changed** — a changed command, a new rule candidate, a rule whose evidence no longer holds, a signpost whose target moved. Never regenerate content that didn't drift. Include a one-paragraph description of what the repo is/does, its real commands, and ONLY the `confidence: high` rule candidates. List `confidence: medium` candidates separately under a clearly marked "Unconfirmed — verify" heading, never merged into the main list. For every path-scoped `.claude/rules/` file drafted in step 2, add a **one-line signpost** here pointing to it — its body loads only when Claude reads a matching file (absent during planning, and when *creating* a new file), so the always-loaded signpost is what keeps it visible when a plan is formed or a new file placed. Add **exemplar** pointers here too, one line each: `mirror <path>` plus the single invisible-wiring touchpoint (a registration step not visible in the exemplar file); the copyable shape lives in the referenced file, read on demand, so never restate it here. Always include the static `### Project memory` subsection — the one-line pointer to `.mhk/memory/MEMORY.md` shown in the template — verbatim; it is byte-stable whether or not any memory has been promoted yet. That pointer is the **only** memory-related thing this command writes: the `.mhk/memory/` store belongs entirely to `/mhk:memory`, and this command must never read, write, or reorder anything under `.mhk/memory/`.
+Read `CLAUDE.md`, `.claude/rules/`, and `.claude/settings.json` within the target repository. Validate rules-block marker pairs before using them; duplicate, malformed, or ambiguous blocks are an affected-file conflict. Build a numbered inventory of every managed command, rule, Unconfirmed entry, signpost, catalog row, exemplar, anti-exemplar, divergence-resolution comment, and existing deny restriction. Retain source file/item identity, filenames, ordering, scope, evidence, and human resolutions. Include marked rule files without signposts and signposts with missing targets. Memory is a separate layer. An older memory pointer inside the rules block (a Project memory subsection, or a line pointing at `.mhk/memory/MEMORY.md`) is inventoried so it can be removed once `CLAUDE.md` has a memory block; until then keep it unchanged. Memory content loaded into this session through the memory block is context, never evidence. Read unowned guidance as policy/context and label it unowned; never adopt it as generated state.
 
-2. **Draft or update the scoped `.claude/rules/<topic>.md` files** (see `${CLAUDE_PLUGIN_ROOT}/templates/RULES_TEMPLATE.md`), each with `paths:` frontmatter set to the proposed glob(s) and a trailing `<!-- mhk:generated -->` marker as the last line. Two kinds land here: **cross-cutting-by-filetype rules** (a constraint on a file *pattern* wherever it occurs) and **reuse-surface catalogs** (the shared internal API surface as a compact `| name | purpose | where |` lookup table — never code skeletons, which drift and start lying). Only create a file when the cartographer actually surfaced a candidate of that kind. For each, add its CLAUDE.md signpost per step 1. On re-run, diff catalog entries against the live surface (a shared widget renamed/moved/added; an entry whose target no longer exists) and propose only the changed rows.
+For discovery, pass this inventory explicitly to `repo-cartographer`, along with the target repository and allowed evidence: repository code, configuration, documentation, `CLAUDE.md`, and `.claude/rules/`. Exclude generated Codex guidance from fresh discovery; read human instructions as policy/context. Explicitly exclude `.mhk/memory/` and native personal memory stores, including linked reads and broad searches. If no owned Claude guidance exists, pass an empty owned inventory plus any human policy context. For migration, use the reference's import inventory alongside this destination inventory.
 
-3. **Draft `permissions.deny` additions** for each hard-constraint candidate, as a proposed edit to `.claude/settings.json` (creating the file with just a `permissions.deny` array if it doesn't exist). Present this as its own clearly labeled part of the diff, separate from the CLAUDE.md/rules content — it changes enforced behavior, not just documentation, so it deserves its own explicit approval.
+On reruns, require a `source` and `disposition` (`verified`, `correction`, `obsolete`, or `unresolved`) for every existing inventory item, with current evidence; additional discoveries are `new`. Check relevant sources without a usage census; retain explicit policy independently of adoption. Reconcile every inventory number before drafting: absence from a fresh scan is not evidence of obsolescence. Preserve verified content by default; the shared audit below may propose justified consolidation with item-to-destination accounting and approval. Preserve settled human decisions. If evidence is unavailable, report the item as unresolved rather than silently dropping it.
 
-4. **Resolve any exemplar divergence first.** If the cartographer flagged two or more competing shapes for one archetype (near-tied, or split along an axis like audience/module), resolve it with the user *before* proposing the exemplar: show each cluster — member count, a representative path, any provenance signal — and ask which is canonical, or whether each is intentional and deserves its own scoped exemplar. Never resolve by a version-name suffix (`_v2`/`_old`); a minority the user confirms as legacy becomes an **anti-exemplar** line ("don't imitate — legacy shape") instead of a mirror pointer. **Record the resolution in-band** as a short comment beside the exemplar pointer in the managed block (e.g. `<!-- divergence resolved 2026-08: the named-service variant is legacy, not a competing archetype -->`), so a later run sees it was already settled and doesn't re-ask unless the clusters have materially changed. The resolution lives visibly in CLAUDE.md — mhk keeps no separate cache or state file.
+## Output particulars
 
-5. **Present the complete proposed diff** — every file, clearly separated and labeled by type (CLAUDE.md / rules / settings.json). Do not write anything yet. Wait for the user to approve, edit, or reject specific files or individual rules. On approval, write only what was approved. There is no cache to update afterward and no version to stamp — the written files are the whole state.
+- Use `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE_TEMPLATE.md` for the root block and `${CLAUDE_PLUGIN_ROOT}/templates/RULES_TEMPLATE.md` for detailed documents. Templates illustrate shape, not facts; include only useful sections. Keep `paths:` first and the exact `<!-- mhk:generated -->` trailer on owned topic files.
+- Never write memory content or memory pointers: the memory block and `.mhk/memory/` belong to `/mhk:memory`; never inspect, write, or reorder the store during this workflow or its audit. If `CLAUDE.md` has no memory block, end the report with one line: team memory isn't set up — run `/mhk:memory`.
+- When competing exemplar shapes require a project-intent decision, show representative paths and resolve that ambiguity with the user. Preserve a short in-band resolution beside the relevant exemplar or anti-exemplar, in the root or topic document that owns it. Never choose by a version-name suffix or re-ask a settled decision without materially changed evidence.
+- Keep settings proposals separate from guidance. Create `.claude/settings.json` only for approved `permissions.deny` additions. After applying, verify JSON parses and existing settings and unowned content are preserved. Never commit generated output.
 
-This command only runs on explicit invocation — never trigger this flow automatically from other work.
+### Select and check
+
+Use the cartographer's compact report to choose useful overview guidance. Keep the target repository read-only until approval. Reuse its sources; make targeted reads only where a consequential claim is unsupported or unclear. Do not repeat the scan or require a separate evidence/decision table.
+
+Check that named paths, commands, and APIs have support. Preserve command working directories, prerequisites, and meaningful test limitations; distinguish inspection from execution. Keep observed preferences scoped, preserve explicit policy and known exceptions, and describe exemplars by the aspect they illustrate. Ask only for consequential missing information or project intent, respecting settled decisions. Omit weak new claims; account for unresolved existing items rather than silently dropping them.
+
+### Render concise guidance
+
+- Put the repository overview, useful commands, essential cross-cutting rules, and topic routing in the `CLAUDE.md` rules block. Omit unnecessary sections.
+- Put scoped rules, compact reuse tables, and relevant exemplar pointers/wiring in `.claude/rules/<topic>.md`, translating applicability into `paths:`. Keep each detail in one home; leave implementation details in source code.
+- Prefer a short instruction or purpose plus a source pointer. Retain policy provenance, settled choices, and exceptions that change its meaning. Omit confidence labels, counts, scan history, and routine evidence from coding context.
+- Preserve useful existing wording, filenames, ordering, and human content. Explain corrections, consolidations, and proposed removals. Unchanged supported guidance should produce no diff; shortening is not permission to discard confirmed requirements.
+
+For every `.claude/rules/` document, add a one-line signpost under `### Reuse before building new` in `CLAUDE.md`. Use the finding's `task` and `summary` to make its relevance clear during planning and file creation, before a matching read loads the scoped document. Keep the detail in that document.
+
+For example:
+
+```
+- UI: reuse the shared widget/dialog catalog before building new ones — see .claude/rules/ui-catalog.md
+```
+
+Keep short, consequential guardrails discoverable in the root even when their details live in a scoped document. Where possible, combine the guardrail and signpost in one line instead of adding a duplicate rule above it. Preserve applicability; visibility must not turn a scoped requirement into a global one. Mention relevant exemplars in the topic's signpost when needed for planning.
+
+For every hard-constraint finding, retain its instructional rule and separately propose `permissions.deny` additions in `.claude/settings.json`. Translate the reported operation into `Read(./<glob>)` and/or `Edit(./<glob>)` only where those tools match the intended restriction. Report unsupported operations rather than pretending a tool-specific entry enforces them. Only append entries and preserve other settings. Present this configuration diff separately for explicit approval.
+
+### Review and apply
+
+Read the root and topic documents together before approval, including relevant human guidance. Check working pointers, supported wording, important exceptions, obvious contradictions, and duplicate meaning. Consider ordinary work and new-file creation: can the agent find the necessary guidance without unrelated documents? Keep this a brief review, not a full application audit or mandatory task-size report.
+
+Check root signposts for planning/new files and overlapping `paths:` for ordinary edits, including unscoped rules. Narrow irrelevant loading only where applicability supports it; a consumer catalog must remain visible to callers. Report important loading gaps without introducing another reference directory.
+
+Resolve concrete problems and recheck affected content. Present the complete proposed content or diff for every affected file, including new topics, with a short summary of meaningful changes, retained decisions, and limitations. Obtain the required content and separate native-configuration approvals. After partial approval, ensure accepted links and instructions remain consistent; obtain approval for any revised proposal before writing.
+
+Read back applied files against the approved content. Check markers/frontmatter, links, and platform-specific preservation/configuration requirements. Report mismatches rather than silently changing approved content. Keep working notes temporary, outside the target repository.
+
+Label the final diffs by file/type (`CLAUDE.md`, rules, settings). This command runs only on explicit invocation. The written files are the whole state; no audit log, cache, or version stamp is written into the target repository.

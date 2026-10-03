@@ -1,0 +1,1 @@
+npm run -s build:plugins && git add plugins/

@@ -1,0 +1,20 @@
+---
+description: Fast, read-only health check of this repo's mhk rules and team memory — what is set up, what is broken or stale, and which command fixes it. Writes nothing.
+argument-hint: "[path]"
+disable-model-invocation: true
+disallowed-tools: Write, Edit, NotebookEdit
+---
+
+`/mhk:doctor` gives a fast, **read-only** overview of the mhk layers in one repository: the path in `$ARGUMENTS`, or the current repository when none is given. It diagnoses and routes; every fix belongs to another command that the user runs deliberately. Never invoke `repo-cartographer`: the deep scan belongs to `/mhk:rules`.
+
+{{> doctor_workflow }}
+
+## Claude Code specifics
+
+- **Routing.** Claude loads a `.claude/rules/` topic only when a file matching its `paths:` is read, so each owned topic also needs a one-line signpost in the rules block naming its path. A signpost whose file is missing → `✗`. An owned topic with no signpost → `!`: it is invisible during planning and new-file creation.
+- **Scope.** A `paths:` glob that matches nothing means the topic never loads. A topic without `paths:` loads in every session; count it toward context size.
+- **Context size.** `CLAUDE.md`, the memory index it imports, and unscoped topics load in every session. Approaching ~200 lines combined → `!`.
+- **Hard constraints.** If `.claude/settings.json` exists, it must parse as JSON; otherwise `✗` (Claude Code's own `/doctor` shows the parse error). Report how many `permissions.deny` entries it has; none is fine.
+- **Memory block.** Compare with the exact block, begin marker to end marker, in `${CLAUDE_PLUGIN_ROOT}/templates/MEMORY_BLOCK.md`.
+- **Unshared native facts.** Find this machine's Claude auto-memory directory for the target repository and read only the frontmatter of its facts, never their bodies. Count facts whose `metadata.type` is `project` or `reference` and that have no file of the same name in `.mhk/memory/`, and report them as one `·` line with their slugs → `/mhk:memory` to review them. Many rightly stay personal, so this is never a warning. If the store can't be found, report `· native memory not checked`. Never write there.
+- **Codex side.** Detect it without checking it: if root `AGENTS.md` has an mhk rules block or `.mhk/rules/` exists, add a **Codex** section with one `·` line: Codex rules present; check them with `$mhk-doctor` in Codex. If Codex has mhk rules and `CLAUDE.md` has no rules block, add that `/mhk:rules migrate` imports and verifies them. The memory store is shared, so the Memory section already covers both platforms.

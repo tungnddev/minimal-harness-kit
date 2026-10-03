@@ -1,0 +1,1 @@
+Codex reaches `.mhk/rules/` documents through the index in `AGENTS.md`. The `paths:` field is scope metadata; it does not cause automatic loading. The index must make the document discoverable during planning and before creating or editing files.

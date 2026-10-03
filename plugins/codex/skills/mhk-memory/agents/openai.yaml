@@ -1,0 +1,5 @@
+interface:
+  display_name: "mhk memory"
+  short_description: "Set up and maintain the shared team memory"
+policy:
+  allow_implicit_invocation: false

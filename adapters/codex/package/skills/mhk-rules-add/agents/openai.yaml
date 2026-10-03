@@ -1,0 +1,5 @@
+interface:
+  display_name: "mhk add rule"
+  short_description: "Verify and add a project rule without a full scan"
+policy:
+  allow_implicit_invocation: false

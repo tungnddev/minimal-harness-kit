@@ -1,0 +1,1 @@
+Check root signposts for planning/new files and overlapping `paths:` for ordinary edits, including unscoped rules. Narrow irrelevant loading only where applicability supports it; a consumer catalog must remain visible to callers. Report important loading gaps without introducing another reference directory.

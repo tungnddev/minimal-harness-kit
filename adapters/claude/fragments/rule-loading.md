@@ -1,0 +1,1 @@
+Claude Code loads a `.claude/rules/` document when it reads a file matching the document's `paths:` globs. It may not be loaded during planning or when creating a new file, so every document also needs a signpost in `CLAUDE.md`.

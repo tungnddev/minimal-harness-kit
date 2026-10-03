@@ -5,7 +5,7 @@
     {
       "name": "mhk",
       "source": "./plugins/claude",
-      "description": "Minimal Harness Kit — project-specific CLAUDE.md, scoped rules, and hard constraints for a single repo."
+      "description": "Minimal Harness Kit — project-specific CLAUDE.md, scoped rules, hard constraints, and shared team memory for a single repo."
     }
   ]
 }

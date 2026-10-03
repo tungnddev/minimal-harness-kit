@@ -2,8 +2,17 @@
   "name": "minimal-harness-kit-monorepo",
   "version": "0.1.0",
   "private": true,
-  "description": "Monorepo for the Minimal Harness Kit (mhk): a Claude Code plugin plus its CLI.",
+  "description": "Monorepo for the Minimal Harness Kit (mhk): shared discovery, Claude and Codex plugins, and its CLI.",
+  "scripts": {
+    "build:plugins": "node scripts/build-plugins.mjs",
+    "check:plugins": "node scripts/build-plugins.mjs --check",
+    "test": "node --test scripts/build-plugins.test.mjs",
+    "prepare": "husky"
+  },
   "workspaces": [
     "cli"
-  ]
+  ],
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
 }

@@ -1,0 +1,5 @@
+interface:
+  display_name: "mhk doctor"
+  short_description: "Read-only health check of mhk rules and team memory"
+policy:
+  allow_implicit_invocation: false

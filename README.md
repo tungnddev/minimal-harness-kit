@@ -1,70 +1,135 @@
-# Minimal Harness Kit (`mhk`)
+<div align="center">
 
-> Teach Claude Code your repo — without the rule bloat.
+# Minimal Harness Kit
 
-`mhk` does two jobs for AI-assisted coding:
+### Teach your AI agent how your project works.
 
-1. **Generate** the harness for a non-AI-native repo — it reads your codebase and writes the small set of *project-specific* rules that actually make an AI agent better at *your* repo. No 300-line `CLAUDE.md` of generic best practices, no hidden state file.
-2. **Sync** that harness across machines — so every checkout and every teammate runs the agent with the same, best-quality context, not just the machine it was tuned on.
+Turn your codebase into useful rules. Turn team decisions into shared memory.<br>
+Keep both in Git, ready for the next session and the next teammate.
 
-Everything it produces is a plain, committed file you can read, edit, and diff.
+**Claude Code · Codex · Plain Markdown · You approve every change**
 
-## Components
+[Get started](#get-started) · [How it works](#how-it-works) · [Documentation](#documentation)
 
-`mhk` builds the harness out of a few independent pieces. Each is introduced on its own so it can grow over time.
+</div>
 
-### Rules — derived from your code
+---
 
-A read-only scan of your code infers what the model would otherwise get wrong: the repo's real commands, its project-specific conventions, the shared helpers worth reusing, and the files that must never be edited. A rule is written **only** when it's a real, non-obvious, project-specific fact — never generic best practice.
+Your project has a way of doing things: the command that actually runs the tests, the helper everyone should reuse, the business rule behind an unusual implementation. That knowledge is spread across code, conversations, and people's heads.
 
-- **`/mhk:rules`** — scan and converge the rules. Idempotent: proposes everything on a fresh repo, only the drift on a tuned one. The first run *is* onboarding.
-- **`/mhk:rules-add "rule text"`** — the manual fast path: record a gotcha you already know, skipping the scan.
+**`mhk` turns that knowledge into project context your AI agent can use.** It scans your repository for useful rules and helps you capture the decisions code cannot explain. Review the changes, commit them, and share them with your team.
 
-### Memory — accumulated as you work
+## Explain less. Keep what your team learns.
 
-The knowledge a scan **can't** show — invariants, war-stories, the *why*. Claude builds this up in its local auto-memory as you work, but that store is machine-local, so a fresh checkout never inherits it.
+| What your agent needs to know | How `mhk` helps |
+| --- | --- |
+| **How to work in this repo** | Finds real commands, project conventions, shared helpers, and examples worth following. |
+| **Why things work this way** | Saves approved decisions, business rules, and lessons from past incidents as team memory. |
+| **What the team already knows** | Keeps context in versioned files that travel with every checkout. |
+| **What matters for this task** | Organizes guidance into a small root document and focused topics with pointers to relevant details. |
 
-- **`/mhk:memory`** — promote the durable, repo-general, non-sensitive slice into a committed `.mhk/memory/` store, so a fresh checkout starts as tuned as your machine. Read-only on native memory; scrubs anything personal or secret.
+For example, a scan can find your shared payment helper. A team memory can explain **why cancelled trips refund to a wallet**. Your agent needs both kinds of knowledge to make a useful change.
 
-### And a way to check
+## How it works
 
-- **`/mhk:doctor`** — a read-only overview of what exists, what looks stale, and which command to run next. Writes nothing.
+### 1. Give your agent a map of the project
 
-Every command runs **only when you type it**, proposes a **diff**, and waits for your approval before writing. Nothing is ever auto-triggered mid-task. → [`docs/DESIGN.md`](docs/DESIGN.md)
+Run the rules workflow. `mhk` inspects your code and project policy, then proposes concise guidance: commands, conventions, reusable components, and source examples. You review the complete diff before it writes.
 
-## Quick start
+### 2. Keep the knowledge code cannot show
 
-`mhk` ships as a globally-installed Claude Code plugin — not files copied into your repo.
+Set up team memory. When you explain a durable project fact during normal work, the agent can offer to save it after the task. You approve the fact; it becomes a note in `.mhk/memory/` for future sessions and teammates.
+
+### 3. Share it through your normal Git workflow
+
+Commit the approved files. Teammates receive the same project knowledge with their checkout. Rerun `mhk` as the project changes to review stale guidance and keep the memory index current.
+
+**You stay in control.** The output is readable Markdown. Existing human guidance is preserved. Native permission changes get a separate review. `mhk` never commits for you.
+
+## Get started
+
+### Claude Code
+
+Install the plugin from your terminal:
 
 ```sh
 claude plugin marketplace add tungnddev/minimal-harness-kit
 claude plugin install mhk@minimal-harness-kit
-/reload-plugins
 ```
 
-Then, inside any repo:
+Then, in Claude Code inside your project:
+
+```text
+/reload-plugins
+/mhk:rules          # Discover project guidance and review the proposed changes
+/mhk:memory         # Set up shared memory and offers to capture new facts
+```
+
+Start with either layer, or use both. Once you approve the output, commit it with your project.
+
+### Codex
+
+Install the plugin from your terminal:
 
 ```sh
-/mhk:rules        # scan → review the diff → approve. Nothing is written without a yes.
-                  # then work normally — Claude Code loads CLAUDE.md automatically.
-/mhk:memory       # promote the durable "why" so teammates inherit it.
-/mhk:doctor       # anytime — see what exists and what to run next.
+codex plugin marketplace add tungnddev/minimal-harness-kit
+codex plugin add mhk@minimal-harness-kit-codex
 ```
 
-Team install (committed + auto-updating) and the CLI placeholder → [`docs/INSTALL.md`](docs/INSTALL.md).
+Then start a new Codex session inside your project:
 
-## Roadmap
+```text
+$mhk-rules         # Discover or verify project guidance
+$mhk-memory        # Set up the same shared team-memory store
+```
 
-- **Phase 1 (now):** the Claude Code plugin — working and installable.
-- **Phase 2:** a **Codex** variant wrapping the same methodology, so the harness isn't Claude-only.
-- **Phase 3:** a real `mhk` CLI — multi-repo sync, global `CLAUDE.md` utilities, and rendering for non-plugin agents.
+Both plugins include rules, one-rule additions, shared team memory, and a read-only doctor.
 
-## Learn more
+[Team installation and update options →](docs/INSTALL.md)
 
-- 📐 [`docs/DESIGN.md`](docs/DESIGN.md) — the design principles and the *why* behind every choice.
-- 🛠️ [`docs/INSTALL.md`](docs/INSTALL.md) — per-user vs. per-team install, auto-update, CLI placeholder.
-- 🗺️ [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the monorepo layout and how the plugin fits together.
+## Rules
 
----
+Give your agent the project knowledge it needs to write code that fits: real commands, conventions, shared helpers, and examples. Generate or refresh guidance from your repository, or add one specific rule with a focused review.
 
-**Brand / npm / marketplace:** `minimal-harness-kit`  ·  **Plugin id + CLI bin:** `mhk`
+| Command | Claude Code | Codex |
+| --- | --- | --- |
+| Generate or refresh rules | `/mhk:rules` | `$mhk-rules` |
+| Add one specific rule | `/mhk:rules-add "rule text"` | `$mhk-rules-add <rule text>` |
+
+Claude loads scoped rules natively; Codex follows the topic index in `AGENTS.md`. Both workflows show the proposed changes for your approval.
+
+[Explore rules: generation, additions, and migration →](docs/RULES_AND_MEMORY.md#rules-lifecycle)
+
+## Memory
+
+Keep the decisions, business rules, and lessons that code cannot explain. Set up team memory once, then approve the facts your agent offers to save as you work. Rerun the command to review existing facts and refresh the index.
+
+| Command | Claude Code | Codex |
+| --- | --- | --- |
+| Set up or maintain team memory | `/mhk:memory` | `$mhk-memory` |
+
+Both agents share `.mhk/memory/` through Git. Claude imports the index and can review native project memories for sharing; Codex follows the memory instructions in `AGENTS.md` without reading personal memory.
+
+[Explore memory: capture, sharing, and maintenance →](docs/RULES_AND_MEMORY.md#memory-lifecycle)
+
+## What's next
+
+We're exploring project tool selection and work verification: helping teams choose useful AI capabilities, share that setup, and check completed work. These are [proposed next steps](docs/NEXT_PHASE.md). The standalone CLI is currently a placeholder.
+
+## Documentation
+
+- [Rules and Memory](docs/RULES_AND_MEMORY.md) — the complete workflow for both agents.
+- [Installation](docs/INSTALL.md) — personal and team setup.
+- [Design](docs/DESIGN.md) — principles behind the project.
+- [Architecture](docs/ARCHITECTURE.md) — source layout and contributor workflow.
+- [Evaluation](docs/GENERATION_EVAL.md) — how to check generation, retrieval, and stable reruns.
+
+Contributing? Edit shared behavior in `core/` and platform behavior in `adapters/`, then run:
+
+```sh
+npm run build:plugins
+npm test
+npm run check:plugins
+```
+
+The `plugins/` directories contain the generated installable packages. See the [maintainer guide](docs/ARCHITECTURE.md#maintainer-workflow).

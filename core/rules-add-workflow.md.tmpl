@@ -1,0 +1,17 @@
+## Input → verify → add
+
+Use the supplied rule text and optional topic/path. If the text is missing, ask for it. Work in one repository; do not follow paths outside it. Skip the cartographer and full-repository scan.
+
+Read the root guidance and relevant topic files to check ownership, duplicates, and conflicts. Verify referenced paths, APIs, or commands with targeted source reads. Distinguish a code fact from a user-defined policy: a new policy may intentionally differ from current code, so record its authority and note the conflict instead of rejecting it for low adoption. Omit generic advice that adds no project-specific meaning. Resolve only consequential ambiguity; do not invent evidence or silently override an existing decision.
+
+If the rule already exists, point to it and make no change. Otherwise keep the user's meaning and scope in a short instruction. Prefer an existing owned topic when it fits; use the root rules block for a cross-cutting rule, or a new focused topic when useful. Do not create an unrelated repository overview. Preserve existing wording and ordering except for the proposed change.
+
+{{> root_blocks }}
+
+On this fast path, write only inside the rules block; if it is absent, propose a minimal one. Preserve older rules-block markers here instead of upgrading them.
+
+Topic files under `{{rules_dir}}/` must start with `paths:` frontmatter and end with `<!-- mhk:generated -->`. Recognize the legacy `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` trailer as owned; preserve it on existing files. Never overwrite an unmarked topic; use a non-colliding destination or resolve the conflict. Keep scopes accurate and preserve other rules.
+
+{{> rule_discovery }}
+
+Show the exact proposed diff or complete new content, including any root routing change, and a brief verification result or limitation. Wait for content approval; the initial rule text is not approval of wording or placement. Before writing, recheck the affected sources and destinations; if changed, revise the proposal for approval. After applying, compare with approved content and check markers, frontmatter, links, and preservation of human text. Never commit. This fast path changes guidance only, not native settings or memory.

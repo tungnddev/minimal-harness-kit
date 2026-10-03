@@ -1,0 +1,11 @@
+---
+description: Verify and add a user-supplied project rule to CLAUDE.md or scoped rules without a full scan.
+argument-hint: "<rule text> [topic/path]"
+disable-model-invocation: true
+---
+
+Use `$ARGUMENTS` as the rule text and optional destination. Run only on explicit invocation.
+
+{{> rules_add_workflow }}
+
+Keep `AGENTS.md`, `AGENTS.override.md`, `.codex/`, `.mhk/`, and `.claude/settings.json` unchanged. Never inspect memory stores. If enforcement is requested, explain that it requires the separate settings review in `/mhk:rules`; do not silently start it.

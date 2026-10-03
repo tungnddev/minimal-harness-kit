@@ -1,0 +1,14 @@
+### mhk blocks in `{{root_file}}`
+
+mhk writes to `{{root_file}}` only inside its own marked blocks, and each block belongs to exactly one workflow:
+
+| Block | Markers | Owner |
+| --- | --- | --- |
+| Rules | `<!-- mhk:rules:begin -->` … `<!-- mhk:rules:end -->` | {{rules_command}} |
+| Memory | `<!-- mhk:memory:begin -->` … `<!-- mhk:memory:end -->` | {{memory_command}} |
+
+- Write only your own block. Read the other mhk blocks as context, so you neither duplicate nor contradict them; never edit, reorder, or adopt their content.
+- Everything outside mhk blocks is human-authored: preserve it, and read it as policy/context.
+- Blocks keep this order: rules, then memory. Place a missing block after any mhk block that comes before it in this order, otherwise at the end of the file. Create `{{root_file}}` if it does not exist.
+- Validate your block's markers before writing. A duplicate, mixed, or unmatched pair is a conflict: stop and ask.
+- The rules block's older markers — `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` and `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` — still mark the rules block. Only the full rules workflow upgrades them, as a separately labelled line in its approved diff.
