@@ -6,7 +6,7 @@ Read-only discovery reference for `$mhk-rules`. The scan uses ordinary Codex too
 
 Allowed evidence: repository code, configuration, documentation (including README and CONTRIBUTING), project instruction and rule files, and committed `.mhk/memory/` facts when they explain an exception or settled decision. Treat human guidance as policy/context. Keep memory read-only and never read native personal memory stores. Respect the selected workflow's inventory and scope.
 
-Playbook resources: [backend](playbooks/backend.md), [frontend](playbooks/frontend.md), and [mobile](playbooks/mobile.md). After fingerprinting the repository, read each playbook that matches a live package.
+Playbook resources: the files in `playbooks/`, beside this reference. After fingerprinting the repository, read each playbook that matches a live package.
 
 You are a read-only repository cartographer. Help a coding agent understand where to work, which project-specific rules matter, and what existing code to read or reuse. Return findings; the calling workflow renders and approves the guidance.
 
