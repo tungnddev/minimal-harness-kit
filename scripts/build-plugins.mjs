@@ -5,13 +5,13 @@ import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
 const sharedFragments = {
-  cartographer: 'core/repo-cartographer.md',
-  rules_template: 'core/templates/rules.md.tmpl',
-  rules_workflow: 'core/rules-workflow.md.tmpl',
-  rules_add_workflow: 'core/rules-add-workflow.md.tmpl',
-  root_blocks: 'core/root-blocks.md.tmpl',
-  memory_store: 'core/memory-store.md.tmpl',
-  doctor_workflow: 'core/doctor-workflow.md.tmpl',
+  cartographer: 'core/rules/cartographer.md',
+  rules_template: 'core/rules/templates/rules.md.tmpl',
+  rules_workflow: 'core/rules/workflow.md.tmpl',
+  rules_add_workflow: 'core/rules/add-workflow.md.tmpl',
+  root_blocks: 'core/shared/root-blocks.md.tmpl',
+  memory_store: 'core/memory/store.md.tmpl',
+  doctor_workflow: 'core/doctor/workflow.md.tmpl',
 };
 const platformFragments = [
   'rule_loading', 'rule_discovery', 'rule_audit', 'enforcement_claims', 'permission_proposals',
@@ -26,7 +26,8 @@ const targets = {
       memory_command: '`/mhk:memory`',
       cartographer_link: '../agents/repo-cartographer.md',
     },
-    playbooks: 'playbooks',
+    // Destination of each core/<layer>/playbooks/ folder.
+    playbooks: { rules: 'playbooks/rules' },
     manifest: '.claude-plugin/plugin.json',
     required: ['commands/rules.md', 'commands/rules-add.md', 'commands/memory.md', 'commands/doctor.md', 'references/codex-migration.md', 'agents/repo-cartographer.md', 'templates/RULES_TEMPLATE.md', 'templates/MEMORY_BLOCK.md', 'templates/MEMORY_TEMPLATE.md'],
   },
@@ -39,7 +40,7 @@ const targets = {
       memory_command: '`$mhk-memory`',
       cartographer_link: '../references/repo-cartographer.md',
     },
-    playbooks: 'skills/mhk-rules/references/playbooks',
+    playbooks: { rules: 'skills/mhk-rules/references/playbooks' },
     manifest: '.codex-plugin/plugin.json',
     required: ['skills/mhk-rules/SKILL.md', 'skills/mhk-rules-add/SKILL.md', 'skills/mhk-rules-add/agents/openai.yaml', 'skills/mhk-rules/references/repo-cartographer.md', 'skills/mhk-rules/assets/RULES_TEMPLATE.md', 'skills/mhk-memory/SKILL.md', 'skills/mhk-memory/agents/openai.yaml', 'skills/mhk-memory/assets/MEMORY_BLOCK.md', 'skills/mhk-memory/assets/MEMORY_TEMPLATE.md', 'skills/mhk-doctor/SKILL.md', 'skills/mhk-doctor/agents/openai.yaml'],
   },
@@ -71,6 +72,16 @@ async function filesUnder(directory) {
     } else if (entry.isFile()) files.push(entry.name);
   }
   return files;
+}
+
+async function playbookLayers(root) {
+  const layers = [];
+  for (const entry of await readdir(path.join(root, 'core'), { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const children = await readdir(path.join(root, 'core', entry.name), { withFileTypes: true });
+    if (children.some(child => child.isDirectory() && child.name === 'playbooks')) layers.push(entry.name);
+  }
+  return layers.sort();
 }
 
 function withSourceNotice(content, source) {
@@ -118,7 +129,13 @@ export function validatePackage(platform, files) {
 
 export async function assemblePlugins(root = repositoryRoot) {
   const packages = new Map();
+  const layers = await playbookLayers(root);
   for (const [platform, target] of Object.entries(targets)) {
+    // A layer's playbooks must ship somewhere; a declared destination must have playbooks.
+    for (const layer of new Set([...layers, ...Object.keys(target.playbooks)])) {
+      if (!layers.includes(layer)) throw new Error(`${platform}: playbook destination declared for missing core/${layer}/playbooks`);
+      if (!target.playbooks[layer]) throw new Error(`${platform}: core/${layer}/playbooks has no playbook destination`);
+    }
     const fragments = {};
     const sources = { ...sharedFragments };
     for (const name of platformFragments) sources[name] = `adapters/${platform}/fragments/${name.replaceAll('_', '-')}.md`;
@@ -134,9 +151,11 @@ export async function assemblePlugins(root = repositoryRoot) {
       const content = await readFile(path.join(root, source), 'utf8');
       add(filename.replace(/\.tmpl$/, ''), filename.endsWith('.tmpl') ? renderTemplate(content, target.variables, fragments) : content, source);
     }
-    for (const filename of await filesUnder(path.join(root, 'core/playbooks'))) {
-      const source = `core/playbooks/${filename}`;
-      add(`${target.playbooks}/${filename}`, await readFile(path.join(root, source), 'utf8'), source);
+    for (const layer of layers) {
+      for (const filename of await filesUnder(path.join(root, 'core', layer, 'playbooks'))) {
+        const source = `core/${layer}/playbooks/${filename}`;
+        add(`${target.playbooks[layer]}/${filename}`, await readFile(path.join(root, source), 'utf8'), source);
+      }
     }
     validatePackage(platform, files);
     packages.set(platform, files);

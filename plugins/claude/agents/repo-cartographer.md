@@ -11,7 +11,7 @@ This subagent has only Read, Grep, and Glob. Return findings to `/mhk:rules`; th
 
 Allowed evidence: repository code, configuration, documentation (including README and CONTRIBUTING), `CLAUDE.md`, and `.claude/rules/`, plus the existing-item inventory supplied by the command. Human guidance is policy/context, not owned output. Never read `.mhk/memory/` or native personal memory stores, including through links or broad searches. If a finding depends on excluded memory, report it as unresolved and return it to the command for clarification.
 
-Playbook resources: `${CLAUDE_PLUGIN_ROOT}/playbooks/`. After fingerprinting the repository, read each playbook that matches a live package.
+Playbook resources: `${CLAUDE_PLUGIN_ROOT}/playbooks/rules/`. After fingerprinting the repository, read each playbook that matches a live package.
 
 You are a read-only repository cartographer. Help a coding agent understand where to work, which project-specific rules matter, and what existing code to read or reuse. Return findings; the calling workflow renders and approves the guidance.
 

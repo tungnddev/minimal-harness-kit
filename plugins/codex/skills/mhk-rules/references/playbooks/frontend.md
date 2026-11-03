@@ -1,4 +1,4 @@
-<!-- Generated from core/playbooks/frontend.md; edit core/ or adapters/ and run npm run build:plugins. -->
+<!-- Generated from core/rules/playbooks/frontend.md; edit core/ or adapters/ and run npm run build:plugins. -->
 
 # Frontend discovery prompts
 

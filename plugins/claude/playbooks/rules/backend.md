@@ -1,4 +1,4 @@
-<!-- Generated from core/playbooks/backend.md; edit core/ or adapters/ and run npm run build:plugins. -->
+<!-- Generated from core/rules/playbooks/backend.md; edit core/ or adapters/ and run npm run build:plugins. -->
 
 # Backend discovery prompts
 

@@ -1,4 +1,4 @@
-<!-- Generated from core/playbooks/mobile.md; edit core/ or adapters/ and run npm run build:plugins. -->
+<!-- Generated from core/rules/playbooks/mobile.md; edit core/ or adapters/ and run npm run build:plugins. -->
 
 # Mobile discovery prompts
 
