@@ -107,6 +107,14 @@ test('packages retain host entry points and render only their own rule behavior'
   }
 });
 
+test('both plugin manifests carry the root package version', async () => {
+  const packages = await assemblePlugins();
+  const { version } = JSON.parse(await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'));
+  assert.match(version, /^\d+\.\d+\.\d+$/);
+  assert.equal(JSON.parse(packages.get('claude').get('.claude-plugin/plugin.json')).version, version);
+  assert.equal(JSON.parse(packages.get('codex').get('.codex-plugin/plugin.json')).version, version);
+});
+
 test('broken and escaping package references are rejected', async () => {
   const packages = await assemblePlugins();
   for (const [platform, filename] of [
@@ -135,7 +143,7 @@ test('broken and escaping package references are rejected', async () => {
 test('fresh builds are repeatable; checks report drift without writing; invalid sources write nothing', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'mhk-build-'));
   t.after(() => rm(root, { recursive: true, force: true }));
-  for (const directory of ['core', 'adapters']) {
+  for (const directory of ['core', 'adapters', 'package.json']) {
     await cp(path.join(repositoryRoot, directory), path.join(root, directory), { recursive: true });
   }
   assert.ok((await buildPlugins({ root })).length > 0);
@@ -168,7 +176,7 @@ test('fresh builds are repeatable; checks report drift without writing; invalid 
 test('every layer playbook folder needs a destination on each platform', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'mhk-build-'));
   t.after(() => rm(root, { recursive: true, force: true }));
-  for (const directory of ['core', 'adapters']) {
+  for (const directory of ['core', 'adapters', 'package.json']) {
     await cp(path.join(repositoryRoot, directory), path.join(root, directory), { recursive: true });
   }
   await mkdir(path.join(root, 'core/testing/playbooks'), { recursive: true });

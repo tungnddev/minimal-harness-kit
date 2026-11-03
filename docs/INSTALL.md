@@ -21,7 +21,7 @@ claude plugin install mhk@minimal-harness-kit
 /reload-plugins
 ```
 
-### Per repo (committed, auto-updating for the whole team)
+### Per repo (committed for the whole team)
 
 Add to the target repo's `.claude/settings.json`. This commits only a small pointer — no plugin resources land in the repo:
 
@@ -33,13 +33,11 @@ Add to the target repo's `.claude/settings.json`. This commits only a small poin
       "autoUpdate": true
     }
   },
-  "enabledPlugins": ["mhk@minimal-harness-kit"]
+  "enabledPlugins": { "mhk@minimal-harness-kit": true }
 }
 ```
 
-> Third-party marketplaces have auto-update **off** by default. `"autoUpdate": true` above (or the `/plugin` → Marketplaces toggle) turns it on so updates land automatically, followed by a `/reload-plugins` prompt.
-
-Plugin auto-update then propagates improvements to every repo at once.
+> Third-party marketplaces have auto-update **off** by default. `"autoUpdate": true` above (or the `/plugin` → Marketplaces toggle) turns it on, so each new release downloads in the background, followed by a `/reload-plugins` prompt. See [Updating](#updating).
 
 ## Codex
 
@@ -95,6 +93,17 @@ Permission caveats: legacy `sandbox_mode` and newer `default_permissions` profil
 `$mhk-rules` never modifies `CLAUDE.md`, `.claude/`, or `.mhk/memory/`. `$mhk-memory` writes only the memory block in `AGENTS.md` and `.mhk/memory/`. `$mhk-doctor` writes nothing: it checks setup, routing, stale references, memory consistency, and Git sharing, then reports which skill or manual action comes next. It does not run tests, verify the truth of guidance, or evaluate native enforcement. Optional layers that are not set up are informational, not errors. `/mhk:doctor` provides the same health check for Claude.
 
 A selected root `AGENTS.override.md` prevents the root `AGENTS.md` blocks from loading. Both Codex setup workflows report this conflict without deleting the override.
+
+## Updating
+
+Each release raises the plugin version ([changelog](../CHANGELOG.md)). Claude Code and Codex download a new copy only when that version changes. `/reload-plugins` and new sessions load only what is already downloaded; they don't fetch.
+
+| | Claude Code | Codex |
+| --- | --- | --- |
+| Download the latest release | `claude plugin marketplace update minimal-harness-kit`, then `claude plugin update mhk@minimal-harness-kit` | `codex plugin marketplace upgrade minimal-harness-kit-codex` |
+| Start using it | `/reload-plugins`, or a new session | A new session |
+| Automatic updates | Turn on auto-update for the marketplace (above). The new release downloads in the background after your first message, then asks for `/reload-plugins` | Not documented; run the upgrade command |
+| Check the installed version | `claude plugin list` | `ls ~/.codex/plugins/cache/minimal-harness-kit-codex/mhk/` |
 
 ## CLI (placeholder)
 

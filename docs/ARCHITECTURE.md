@@ -95,6 +95,14 @@ Run `npm install` once to enable the Husky pre-commit hook: every commit then re
 
 CI runs the build tests and the drift check. Tests cover concrete platform output, frontmatter placement, independent package references, repeated builds, read-only drift detection, and failure before writes. Static assembly checks do not cover installed-agent behavior or fresh-session retrieval. Use [GENERATION_EVAL.md](GENERATION_EVAL.md) for manual regression checks when changing either plugin or its host integration.
 
+### Releases
+
+The release version is written only in the root `package.json`. The build fills `{{version}}` in both plugin manifests from it, and a test checks that they match. Claude Code and Codex download a new copy only when the version changes, so pushing commits without a version change reaches no installed user. To release:
+
+1. `npm version <x.y.z> --no-git-tag-version`, then `npm run build:plugins`.
+2. Add the release to [CHANGELOG.md](../CHANGELOG.md).
+3. Commit, tag `v<x.y.z>`, and push the commit and the tag.
+
 ## Scope
 
 Each invocation covers exactly one repository, including its packages or modules. There is no fan-out across repositories or per-module harness generation. See [DESIGN.md](DESIGN.md) for the content and ownership principles.

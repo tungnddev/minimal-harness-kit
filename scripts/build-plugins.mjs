@@ -130,7 +130,10 @@ export function validatePackage(platform, files) {
 export async function assemblePlugins(root = repositoryRoot) {
   const packages = new Map();
   const layers = await playbookLayers(root);
+  // The root package.json is the only place the release version is written.
+  const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   for (const [platform, target] of Object.entries(targets)) {
+    const variables = { ...target.variables, version };
     // A layer's playbooks must ship somewhere; a declared destination must have playbooks.
     for (const layer of new Set([...layers, ...Object.keys(target.playbooks)])) {
       if (!layers.includes(layer)) throw new Error(`${platform}: playbook destination declared for missing core/${layer}/playbooks`);
@@ -149,7 +152,7 @@ export async function assemblePlugins(root = repositoryRoot) {
     for (const filename of await filesUnder(path.join(root, sourceDirectory))) {
       const source = `${sourceDirectory}/${filename}`;
       const content = await readFile(path.join(root, source), 'utf8');
-      add(filename.replace(/\.tmpl$/, ''), filename.endsWith('.tmpl') ? renderTemplate(content, target.variables, fragments) : content, source);
+      add(filename.replace(/\.tmpl$/, ''), filename.endsWith('.tmpl') ? renderTemplate(content, variables, fragments) : content, source);
     }
     for (const layer of layers) {
       for (const filename of await filesUnder(path.join(root, 'core', layer, 'playbooks'))) {
