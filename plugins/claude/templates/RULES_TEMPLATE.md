@@ -4,7 +4,7 @@ Shape example for `.claude/rules/<topic>.md`; content is illustrative, not proje
 
 Keep a topic focused: short rules, a useful lookup table, and relevant exemplar pointers with essential wiring. Give detail one home and retain important scope exceptions and settled decisions. Prefer pointers to live code over copied implementations.
 
-`paths:` frontmatter must come first; do not add root block markers. Every owned topic ends with `<!-- mhk:generated -->`. Only that exact marker or the legacy `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` proves ownership. Preserve unmarked human files. Propose legacy-marker upgrades explicitly in the approved diff; write only the current form.
+`paths:` frontmatter must come first; do not add root block markers. Every owned topic ends with `<!-- mhk:generated -->`; only that marker, or its older form listed with the root blocks, proves ownership. Preserve unmarked human files.
 
 Claude Code loads a `.claude/rules/` document when it reads a file matching the document's `paths:` globs. It may not be loaded during planning or when creating a new file, so every document also needs a signpost in `CLAUDE.md`.
 

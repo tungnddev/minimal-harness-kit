@@ -8,8 +8,9 @@
 | Memory setup | Memory block in `CLAUDE.md` | Memory block in `AGENTS.md` |
 | Shared memory | `.mhk/memory/<slug>.md` and `.mhk/memory/MEMORY.md` | The same store |
 | Optional native restrictions | Append-only `permissions.deny` proposals in `.claude/settings.json` | Separately validated proposals in `.codex/config.toml` |
+| Version | `claude` entry in `.mhk/version.json` | `codex` entry in the same file |
 
-There is no additional `mhk` bookkeeping file. Root blocks and generated-rule markers identify managed guidance; the memory workflow owns the dedicated memory store. Human content outside managed blocks and unmarked rule files is preserved. See [DESIGN.md](DESIGN.md).
+The only `mhk` bookkeeping file is `.mhk/version.json`, which holds one version per platform and nothing else. Root blocks and generated-rule markers identify managed guidance; the memory workflow owns the dedicated memory store. Human content outside managed blocks and unmarked rule files is preserved. See [DESIGN.md](DESIGN.md).
 
 ## Claude Code
 
@@ -41,9 +42,9 @@ Add to the target repo's `.claude/settings.json`. This commits only a small poin
 
 ## Codex
 
-Codex supports the same four workflows as Claude Code. Its rules and shared memory are retrieved through instructions in `AGENTS.md`: Codex does not natively load `.mhk/rules/` by `paths:` or import the shared memory index. The plugin supplies the routing instructions for both.
+Codex supports the same five workflows as Claude Code. Its rules and shared memory are retrieved through instructions in `AGENTS.md`: Codex does not natively load `.mhk/rules/` by `paths:` or import the shared memory index. The plugin supplies the routing instructions for both.
 
-The Codex pack is an independent plugin (`plugins/codex/`) with four explicitly invoked skills: `mhk-rules`, `mhk-rules-add`, `mhk-memory`, and `mhk-doctor`. It has its own catalog, `.agents/plugins/marketplace.json`, separate from the Claude catalog `.claude-plugin/marketplace.json`.
+The Codex pack is an independent plugin (`plugins/codex/`) with five explicitly invoked skills: `mhk-rules`, `mhk-rules-add`, `mhk-memory`, `mhk-migrate`, and `mhk-doctor`. It has its own catalog, `.agents/plugins/marketplace.json`, separate from the Claude catalog `.claude-plugin/marketplace.json`.
 
 ### Per user
 
@@ -71,13 +72,13 @@ codex
 > $mhk-doctor
 ```
 
-`mhk-rules` never runs implicitly. Pass `$mhk-rules migrate` or `$mhk-rules fresh` to choose the mode up front. Otherwise, when an mhk Claude harness exists and no Codex output does, it asks first: **Migrate and verify** (recommended) or **Fresh scan**. It inspects current code, then presents the complete rule diff, and any native-permission diff separately, before writing anything. It never commits.
+`mhk-rules` never runs implicitly. When an mhk Claude harness exists and no Codex output does, it asks first: **Import and verify** (recommended) or **Fresh scan**; say which in the invocation to skip the question. It inspects current code, then presents the complete rule diff, and any native-permission diff separately, before writing anything. It never commits.
 
-For the reverse direction in Claude, run `/mhk:rules migrate` to verify and import `AGENTS.md` and `.mhk/rules/` into Claude guidance without modifying Codex files. With only Codex MHK output present, `/mhk:rules` offers migration or fresh discovery before scanning. Existing Claude output defaults to an ordinary Claude rerun unless migration is explicitly requested.
+For the reverse direction in Claude, `/mhk:rules` offers **Import and verify** when only Codex MHK output is present: it verifies `AGENTS.md` and `.mhk/rules/` and imports them into Claude guidance without modifying Codex files. Existing Claude output means an ordinary Claude rerun, unless you ask to import again.
 
 To add one rule in Codex, use `$mhk-rules-add <rule text>` with an optional topic/path. It checks relevant sources and existing guidance, proposes the exact change and any index row, then waits for approval. An existing duplicate produces no change. It leaves native settings, memory, and Claude files untouched. `/mhk:rules-add` provides the same fast path in Claude.
 
-To set up team memory, invoke `$mhk-memory`. It adds a memory block to `AGENTS.md` and creates the `.mhk/memory/` index. From then on, when you correct or explain a project fact the team needs, Codex asks at the end of the task whether to save it. It never reads Codex's own memories, so it works whether or not that feature is on. `/mhk:memory` sets up the Claude memory block and can also sweep native Claude project memories. Run setup once per platform; both plugins reuse the same store without resetting existing facts. Either memory command can be run before rules. See [RULES_AND_MEMORY.md](RULES_AND_MEMORY.md) for capture, maintenance, and migration behavior.
+To set up team memory, invoke `$mhk-memory`. It adds a memory block to `AGENTS.md` and creates the `.mhk/memory/` index. From then on, when you correct or explain a project fact the team needs, Codex asks at the end of the task whether to save it. It never reads Codex's own memories, so it works whether or not that feature is on. `/mhk:memory` sets up the Claude memory block and can also sweep native Claude project memories. Run setup once per platform; both plugins reuse the same store without resetting existing facts. Either memory command can be run before rules. See [RULES_AND_MEMORY.md](RULES_AND_MEMORY.md) for capture, maintenance, import, and migration behavior.
 
 Placing the skill in a repository's `.agents/skills/` is fine for iterating on the skill itself, but it is not the supported install and does not validate the plugin.
 
@@ -104,6 +105,9 @@ Each release raises the plugin version ([changelog](../CHANGELOG.md)). Claude Co
 | Start using it | `/reload-plugins`, or a new session | A new session |
 | Automatic updates | Turn on auto-update for the marketplace (above). The new release downloads in the background after your first message, then asks for `/reload-plugins` | Not documented; run the upgrade command |
 | Check the installed version | `claude plugin list` | `ls ~/.codex/plugins/cache/minimal-harness-kit-codex/mhk/` |
+| Bring each repository's mhk files up to it | `/mhk:migrate` | `$mhk-migrate` |
+
+After an update, run the migrate workflow once in each repository that has mhk files, on each platform it uses. It applies the migration notes released since the version in `.mhk/version.json`, shows the diff, and writes after approval; it never scans the code. Until it runs, the other writing workflows stop and point to it when a note is pending for their layer. `/mhk:doctor` and `$mhk-doctor` show whether a migration is pending.
 
 ## CLI (placeholder)
 

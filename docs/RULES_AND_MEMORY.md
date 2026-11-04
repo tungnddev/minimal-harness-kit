@@ -8,9 +8,9 @@ This guide describes the workflows shipped in the Claude and Codex packages. For
 | --- | --- | --- |
 | Generate or refresh project guidance | `/mhk:rules` | `$mhk-rules` |
 | Verify and add one supplied rule | `/mhk:rules-add "rule text"` | `$mhk-rules-add <rule text>` |
-| Import the other platform's rules | `/mhk:rules migrate` | `$mhk-rules migrate` |
-| Discover from repository sources | `/mhk:rules fresh` | `$mhk-rules fresh` |
+| Import the other platform's rules | `/mhk:rules`, then **Import and verify** | `$mhk-rules`, then **Import and verify** |
 | Set up or maintain shared memory | `/mhk:memory` | `$mhk-memory` |
+| Bring mhk files up to the installed version | `/mhk:migrate` | `$mhk-migrate` |
 | Inspect surface health without writes | `/mhk:doctor` | `$mhk-doctor` |
 
 Every invocation operates on one repository, including its modules. Rules and memory work independently. For a new setup, run the rules workflow for your platform and review its proposal, then run the memory workflow and review that proposal. Memory can also be set up first, with no facts yet.
@@ -26,6 +26,7 @@ For a repository used with both agents, set up each platform's root blocks. Each
 | Team facts | `.mhk/memory/<slug>.md` | Same files |
 | Derived memory index | `.mhk/memory/MEMORY.md` | Same file |
 | Optional native restriction proposals | `.claude/settings.json` | `.codex/config.toml` |
+| Version of this platform's mhk files | `.mhk/version.json`, key `claude` | Same file, key `codex` |
 
 Root files use separate marker pairs, in this order:
 
@@ -41,17 +42,27 @@ Root files use separate marker pairs, in this order:
 
 The full rules workflow and `rules-add` write only the rules layer. The memory workflow writes only the memory block and store. Each reads the other block as context and preserves its content; text outside the blocks remains human-authored. Duplicate, mixed, or unmatched markers require resolution before the affected block can be written.
 
-Owned rule documents have `paths:` frontmatter and a trailing `<!-- mhk:generated -->` marker. Unmarked rule files are preserved. Older rules-block markers and the long generated-file trailer remain recognized: only the full rules workflow upgrades them, as an explicit part of the approved diff. `rules-add` preserves them.
+Owned rule documents have `paths:` frontmatter and a trailing `<!-- mhk:generated -->` marker. Unmarked rule files are preserved. Older rules-block markers and the long generated-file trailer are still recognized as mhk files, but only the migrate workflow converts them.
 
-An old memory pointer inside a rules block stays until that root file has a memory block. Memory setup leaves the old pointer alone; the next full rules run removes it. Neither workflow edits the other layer to complete this transition.
+## Versions and migration
+
+`.mhk/version.json` records, per platform, the mhk version that platform's files were last migrated to:
+
+```json
+{ "claude": "0.3.0", "codex": "0.3.0" }
+```
+
+Each release that changes what a layer writes ships a migration note: short instructions for converting the older shape, each item marked `edit`, `restructure`, `remove`, `flag` (ask a person) or `rerun` (needs a code scan, so name the command). After updating mhk, run `/mhk:migrate` or `$mhk-migrate`. It reads only this platform's mhk files and the notes newer than its entry, shows one diff per file, and after approval writes the files and sets the entry to the installed version. It never scans the code or sets up a missing layer, and it never commits. Unchanged files mean no diff; when no note is pending, the only change is the version entry.
+
+The writing workflows check the file first. They stop and point to migrate when this platform has mhk files but no entry, or when a note for their layer is pending, and they refuse to write when the entry is newer than the installed mhk. They never move an existing entry themselves; a platform's first mhk files add it. The file holds versions only, so losing it is safe: the next migrate checks every note, and notes match only the older shape.
 
 ## Rules lifecycle
 
-The full workflow inventories existing guidance, chooses discovery or migration, verifies findings, drafts concise rules, and reviews root and topic documents together. It checks pointers, scope, exceptions, contradictions, duplication, and whether planning or new-file tasks can find relevant guidance. Confirmed project policy survives incomplete adoption in code.
+The full workflow inventories existing guidance, chooses discovery or an import, verifies findings, drafts concise rules, and reviews root and topic documents together. It checks pointers, scope, exceptions, contradictions, duplication, and whether planning or new-file tasks can find relevant guidance. Confirmed project policy survives incomplete adoption in code.
 
-With no owned guidance, the workflow discovers from repository sources. If only the other platform has mhk rules, it offers migration or fresh discovery before deep analysis. An explicit `migrate` or `fresh` selects that mode directly. With existing destination rules and no mode, it re-verifies those rules without importing later changes from the other platform. A fresh scan still preserves existing human policy and ownership boundaries.
+With no owned guidance, the workflow discovers from repository sources. If only the other platform has mhk rules, it offers **Import and verify** or a fresh scan before deep analysis; an invocation that already says which skips the question. With existing destination rules, it re-verifies those rules without importing later changes from the other platform, unless asked to import again. A fresh scan still preserves existing human policy and ownership boundaries.
 
-Migration verifies source guidance against current evidence and translates it for the destination agent. The source platform stays unchanged. This is an explicit import, not ongoing synchronization.
+An import verifies source guidance against current evidence and translates it for the destination agent. The source platform stays unchanged. This is an explicit import, not ongoing synchronization.
 
 The complete proposed diff goes to review before writes. Native restrictions receive a separate proposal and approval; guidance alone does not enforce a filesystem or tool restriction. Applied output is read back and checked. Reruns preserve verified wording and settled decisions; supported corrections or concrete audit improvements can produce a proposal. Unchanged, already-audited guidance produces no diff.
 
@@ -115,16 +126,16 @@ Claude discovery excludes memory stores as evidence, even when memory is already
 
 ## Doctor: setup health and next actions
 
-Run `/mhk:doctor` in Claude Code or `$mhk-doctor` in Codex, optionally specifying a repository path. Both doctors check surface health from one shared checklist: block markers and order, topic routing, `paths:` globs that match nothing, pointers and named scripts that no longer exist, the exact memory block, index consistency, committed-fact safety, and whether mhk files are tracked by Git. Claude's also lists unshared native project facts by slug; Codex's checks for a root `AGENTS.override.md` and never reads personal memory. Each reports its own platform, detects the other platform without auditing its rules, and points to that platform's doctor. It suggests migration only when the current platform lacks a rules block.
+Run `/mhk:doctor` in Claude Code or `$mhk-doctor` in Codex, optionally specifying a repository path. Both doctors check surface health from one shared checklist: block markers and order, topic routing, `paths:` globs that match nothing, pointers and named scripts that no longer exist, the exact memory block, index consistency, committed-fact safety, and whether mhk files are tracked by Git. Claude's also lists unshared native project facts by slug; Codex's checks for a root `AGENTS.override.md` and never reads personal memory. Each reports its own platform, detects the other platform without auditing its rules, and points to that platform's doctor. It suggests an import only when the current platform lacks a rules block, and it reports this platform's version entry and any pending migration first.
 
-Reports use Rules, Memory, Sharing, then the other platform when present, with these marks:
+Reports use Version, Rules, Memory, Sharing, then the other platform when present, with these marks:
 
 | Mark | Meaning | Example |
 | --- | --- | --- |
 | `✓` | Healthy | Memory block and index are current |
-| `!` | Warning: drift or sharing risk | Empty scope glob, stale pointer, untracked or ignored output |
+| `!` | Warning: drift, sharing risk, or a pending migration | Empty scope glob, stale pointer, untracked or ignored output, files from before version tracking |
 | `✗` | Error: broken loading, invalid state, or unsafe content | Missing routed topic, malformed block, fact conflict, sensitive data |
-| `·` | Information | Optional layer not set up, legacy marker, rule age, tracked edits |
+| `·` | Information | Optional layer not set up, rule age, tracked edits, a version entry behind with no format changes |
 
 The final line gives error/warning counts and next actions in order, or **Everything looks current.** with optional next steps. Unshared Claude native facts are informational and listed by slug. Sensitive matches are identified only by file and kind; fact bodies are never printed.
 

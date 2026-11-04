@@ -19,6 +19,12 @@ Operate on the repository path in `$ARGUMENTS`, or the current repository when n
 
 {{> root_blocks }}
 
+{{> version_file }}
+
+## Version check
+
+This command writes the **memory** layer. {{> version_check }}
+
 ## Inputs
 
 1. **Native store (read-only):** this machine's Claude auto-memory files for this project, plus its native `MEMORY.md` index.
@@ -27,7 +33,7 @@ Operate on the repository path in `$ARGUMENTS`, or the current repository when n
 
 ## Set up the layer
 
-Converge the memory block to the template's exact content. If `.mhk/memory/MEMORY.md` does not exist, create it with the index header, so the block's import resolves from the next session on. If the rules block still contains an older memory pointer (a Project memory subsection, or a line pointing at `.mhk/memory/MEMORY.md`), leave it: it belongs to the rules block, and the next `/mhk:rules` run removes it. Say so in the report.
+Converge the memory block to the template's exact content. If `.mhk/memory/MEMORY.md` does not exist, create it with the index header, so the block's import resolves from the next session on.
 
 ## Sweep native memory
 

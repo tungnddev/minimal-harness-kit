@@ -1,0 +1,8 @@
+Check the version file before any scan or draft:
+
+- This platform has mhk files but no entry → stop: they predate version tracking; run {{migrate_command}} first.
+- The entry is newer than {{version}} → stop: a newer mhk wrote these files; update mhk first.
+- A note for the layer you write is pending → stop: run {{migrate_command}} first.
+- The file isn't valid JSON, or the entry isn't a version → stop and ask the user to fix it.
+
+Otherwise continue and leave the entry unchanged: only {{migrate_command}} moves it. The exception is a platform's first mhk files: when this platform has no mhk files and no entry, add the entry with {{version}} to the same diff, creating the file if it is missing.

@@ -1,6 +1,8 @@
-# Verify and migrate existing Claude guidance
+<!-- Generated from adapters/codex/package/skills/mhk-rules/references/import.md; edit core/ or adapters/ and run npm run build:plugins. -->
 
-Use this only after migration was selected. Migration **validates the existing Claude inventory against current evidence**; it is not a copy, and it does not silently turn into a broad discovery scan for unrelated new conventions. (A later normal rerun, or an explicit fresh scan, handles new discoveries.) Use [repo-cartographer.md](repo-cartographer.md) for focused discovery and source checks.
+# Verify and import existing Claude guidance
+
+Use this only after an import was chosen. An import **validates the existing Claude inventory against current evidence**; it is not a copy, and it does not silently turn into a broad discovery scan for unrelated new conventions. (A later normal rerun, or an explicit fresh scan, handles new discoveries.) Use [repo-cartographer.md](repo-cartographer.md) for focused discovery and source checks.
 
 All sources are **read-only**: `CLAUDE.md`, `.claude/rules/`, `.claude/settings.json`, and `.mhk/memory/`. Never modify them, whatever their ownership.
 
@@ -8,7 +10,7 @@ All sources are **read-only**: `CLAUDE.md`, `.claude/rules/`, `.claude/settings.
 
 Build a numbered inventory of every item before verifying anything. Include:
 
-- every command, rule, signpost (the one-line pointers to `.claude/rules/` files), exemplar pointer, anti-exemplar, divergence-resolution comment, and Unconfirmed entry inside the `CLAUDE.md` rules block (`<!-- mhk:rules:begin -->` … `<!-- mhk:rules:end -->`, or an older `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` or `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` pair). Do not migrate the Claude memory block or an older memory pointer inside the rules block: `$mhk-memory` sets up Codex's own memory block;
+- every command, rule, signpost (the one-line pointers to `.claude/rules/` files), exemplar pointer, anti-exemplar, divergence-resolution comment, and Unconfirmed entry inside the `CLAUDE.md` rules block (`<!-- mhk:rules:begin -->` … `<!-- mhk:rules:end -->`, or an older `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` or `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` pair). Do not import the Claude memory block or an older memory pointer inside the rules block: `$mhk-memory` sets up Codex's own memory block;
 - every `.claude/rules/*.md` file, and within each: its `paths:` globs, each rule statement, and **every catalog row** individually;
 - every relevant `permissions.deny` (and `allow`, where it qualifies a deny) entry in `.claude/settings.json` — read the actual settings, because prose in rule files may omit `Read` restrictions or misstate them.
 
@@ -63,7 +65,7 @@ Allowed changes to verified content are limited to:
 - the ownership marker becoming the exact short form;
 - removal or correction of Claude-only enforcement claims — e.g. "Edit-denied in `.claude/settings.json`" must not survive as a Codex enforcement promise; reword it as an instruction unless a validated Codex restriction exists (see [permissions.md](permissions.md)).
 
-Explain every substantive omission **individually** in the migration summary, citing its inventory number. Claude-only references to other commands (`/mhk:memory`, `/mhk:rules-add`) are rewritten or dropped with a note.
+Explain every substantive omission **individually** in the import summary, citing its inventory number. Claude-only references to other commands (`/mhk:memory`, `/mhk:rules-add`) are rewritten or dropped with a note.
 
 ## 4. Hard constraints
 
@@ -71,8 +73,8 @@ Pass every inventoried restriction to [permissions.md](permissions.md) as `opera
 
 ## 5. Existing Codex output
 
-A normal rerun with owned Codex output uses the Codex inventory and does **not** re-import Claude changes. Import Claude again only when the user explicitly requests migration. In that case, compare each imported item against the current Codex output and show conflicts with Codex-specific decisions (edited wording, resolved divergences, rejected rules, native-permission choices); never overwrite them silently.
+A normal rerun with owned Codex output uses the Codex inventory and does **not** re-import Claude changes. Import Claude again only when the user asks for an import. In that case, compare each imported item against the current Codex output and show conflicts with Codex-specific decisions (edited wording, resolved divergences, rejected rules, native-permission choices); never overwrite them silently.
 
-## 6. Migration summary
+## 6. Import summary
 
-Apply the shared draft audit from the skill after rendering; migration remains limited to its selected inventory and necessary verification. Before the diffs, present a summary table covering every inventory item: `# | source (file:line or row) | item | disposition | evidence | destination`. List Unresolved items with their questions, flagged connection problems (unlinked marked files, missing signpost targets, unmarked-but-linked sources), and boundary findings. Approval of migration *mode* is not approval to write anything; the diffs are approved separately.
+Apply the shared draft audit from the skill after rendering; the import remains limited to its selected inventory and necessary verification. Before the diffs, present a summary table covering every inventory item: `# | source (file:line or row) | item | disposition | evidence | destination`. List Unresolved items with their questions, flagged connection problems (unlinked marked files, missing signpost targets, unmarked-but-linked sources), and boundary findings. Choosing to import is not approval to write anything; the diffs are approved separately.

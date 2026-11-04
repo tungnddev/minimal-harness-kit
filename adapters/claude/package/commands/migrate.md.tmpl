@@ -1,0 +1,13 @@
+---
+description: Bring this repo's mhk files up to the installed mhk version after an update, by applying the released migration notes without a code scan. Review before writing.
+argument-hint: "[path]"
+disable-model-invocation: true
+---
+
+`/mhk:migrate` upgrades this repository's Claude mhk files — the `CLAUDE.md` rules and memory blocks and the owned `.claude/rules/*.md` files — to the installed mhk, {{version}}. Operate on the path in `$ARGUMENTS`, or the current repository when none is given. Run it after updating mhk, or when another mhk command or `/mhk:doctor` asks for it.
+
+- **Notes:** `${CLAUDE_PLUGIN_ROOT}/migrations/<layer>/<version>.md`, one file per release that changed a layer's files.
+- **Memory block template:** `${CLAUDE_PLUGIN_ROOT}/templates/MEMORY_BLOCK.md`, for notes that write the memory block.
+- **Codex files** (`AGENTS.md`, `.mhk/rules/`) and the `codex` entry are out of scope. If they exist, end the report with one line: run `$mhk-migrate` in Codex.
+
+{{> migrate_workflow }}

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { assemblePlugins, buildPlugins, renderTemplate, validatePackage } from './build-plugins.mjs';
+import { assemblePlugins, buildPlugins, compareVersions, migrationTable, renderTemplate, validateMigrationNote, validatePackage } from './build-plugins.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
 
@@ -35,9 +35,11 @@ test('packages retain host entry points and render only their own rule behavior'
   assert.match(codex.get('skills/mhk-rules/agents/openai.yaml'), /allow_implicit_invocation: false/);
   assert.match(codex.get('skills/mhk-rules-add/SKILL.md'), /^---\nname: mhk-rules-add\n/);
   assert.match(codex.get('skills/mhk-rules-add/agents/openai.yaml'), /allow_implicit_invocation: false/);
+  assert.match(codex.get('skills/mhk-migrate/SKILL.md'), /^---\nname: mhk-migrate\n/);
+  assert.match(codex.get('skills/mhk-migrate/agents/openai.yaml'), /allow_implicit_invocation: false/);
 
   // Commands run only when typed; the host enforces it, not the command body.
-  for (const command of ['rules', 'rules-add', 'memory', 'doctor']) {
+  for (const command of ['rules', 'rules-add', 'memory', 'doctor', 'migrate']) {
     const frontmatter = claude.get(`commands/${command}.md`).match(/^---\n([\s\S]*?)\n---\n/)[1];
     assert.match(frontmatter, /^disable-model-invocation: true$/m);
   }
@@ -49,9 +51,14 @@ test('packages retain host entry points and render only their own rule behavior'
   const doctorWorkflow = await readFile(path.join(repositoryRoot, 'core/doctor/workflow.md.tmpl'), 'utf8');
   const rootBlocks = await readFile(path.join(repositoryRoot, 'core/shared/root-blocks.md.tmpl'), 'utf8');
   const memoryStore = await readFile(path.join(repositoryRoot, 'core/memory/store.md.tmpl'), 'utf8');
-  for (const [platform, files, entry, doctor] of [
-    ['claude', claude, 'commands/rules-add.md', 'commands/doctor.md'],
-    ['codex', codex, 'skills/mhk-rules-add/SKILL.md', 'skills/mhk-doctor/SKILL.md'],
+  const versionFile = await readFile(path.join(repositoryRoot, 'core/shared/version-file.md.tmpl'), 'utf8');
+  const versionCheck = await readFile(path.join(repositoryRoot, 'core/shared/version-check.md.tmpl'), 'utf8');
+  const migrateWorkflow = await readFile(path.join(repositoryRoot, 'core/migrate/workflow.md.tmpl'), 'utf8');
+  const { version } = JSON.parse(await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'));
+  const migration_notes = await migrationTable(repositoryRoot, version);
+  for (const [platform, files, entry, doctor, writers, migrate] of [
+    ['claude', claude, 'commands/rules-add.md', 'commands/doctor.md', ['commands/rules.md', 'commands/memory.md'], 'commands/migrate.md'],
+    ['codex', codex, 'skills/mhk-rules-add/SKILL.md', 'skills/mhk-doctor/SKILL.md', ['skills/mhk-rules/SKILL.md', 'skills/mhk-memory/SKILL.md'], 'skills/mhk-migrate/SKILL.md'],
   ]) {
     const discovery = await readFile(path.join(repositoryRoot, `adapters/${platform}/fragments/rule-discovery.md`), 'utf8');
     const variables = {
@@ -59,13 +66,41 @@ test('packages retain host entry points and render only their own rule behavior'
       rules_dir: platform === 'claude' ? '.claude/rules' : '.mhk/rules',
       rules_command: platform === 'claude' ? '`/mhk:rules`' : '`$mhk-rules`',
       memory_command: platform === 'claude' ? '`/mhk:memory`' : '`$mhk-memory`',
+      migrate_command: platform === 'claude' ? '`/mhk:migrate`' : '`$mhk-migrate`',
+      platform_key: platform,
+      version,
+      migration_notes,
     };
-    const expected = renderTemplate(addWorkflow, variables, { rule_discovery: discovery, root_blocks: rootBlocks });
+    const shared = { root_blocks: rootBlocks, version_file: versionFile, version_check: versionCheck, memory_store: memoryStore };
+    const expected = renderTemplate(addWorkflow, variables, { ...shared, rule_discovery: discovery });
     assert.ok(files.get(entry).includes(expected.trimEnd()));
-    // Both doctors check against the same ownership contract and store format the writers use.
-    const checks = renderTemplate(doctorWorkflow, variables, { root_blocks: rootBlocks, memory_store: memoryStore });
+    // Both doctors check against the same ownership contract, version file and store format the writers use.
+    const checks = renderTemplate(doctorWorkflow, variables, shared);
     assert.ok(files.get(doctor).includes(checks.trimEnd()));
+    // Every writer runs the same version check; migrate is the one workflow that moves the entry.
+    for (const writer of writers) {
+      assert.ok(files.get(writer).includes(renderTemplate(versionCheck, variables, {}).trimEnd()), `${platform}/${writer}`);
+    }
+    assert.ok(files.get(migrate).includes(renderTemplate(migrateWorkflow, variables, shared).trimEnd()));
+    assert.doesNotMatch(files.get(migrate), /repo-cartographer|testing-scout/);
   }
+
+  // The platform question is the only source choice; the old explicit modes are gone.
+  assert.match(claude.get('commands/rules.md'), /^argument-hint: "\[path\]"$/m);
+  assert.match(claude.get('commands/rules.md'), /\*\*Import and verify Codex rules \(recommended\)\*\*/);
+  assert.match(codex.get('skills/mhk-rules/SKILL.md'), /\*\*Import and verify existing Claude rules \(recommended\)\*\*/);
+  for (const files of [claude, codex]) {
+    for (const [filename, content] of files) {
+      assert.doesNotMatch(content, /mhk:rules migrate|mhk-rules migrate|Explicit `(?:migrate|fresh)`|explicitly requested `migrate`/, filename);
+    }
+  }
+  // Only the migrate notes still describe how to convert older markers.
+  for (const filename of ['commands/rules.md', 'commands/rules-add.md', 'templates/RULES_TEMPLATE.md']) {
+    assert.doesNotMatch(claude.get(filename), /upgrad(?:e|ing) (?:its |their )?markers|Legacy markers/, filename);
+  }
+  assert.equal(claude.get('migrations/rules/0.3.0.md').includes('CLAUDE.md'), true);
+  assert.equal(codex.get('skills/mhk-migrate/references/migrations/rules/0.3.0.md').includes('AGENTS.md'), true);
+  assert.match(migration_notes, /\| rules \| 0\.3\.0 \|\n\| memory \| none \|/);
 
   // Each layer owns its own root block; the rules templates carry no memory pointer.
   for (const [files, rootTemplate, memoryBlock, memoryTemplate] of [
@@ -121,7 +156,9 @@ test('broken and escaping package references are rejected', async () => {
     ['codex', 'skills/mhk-rules-add/SKILL.md'],
     ['codex', 'skills/mhk-rules-add/agents/openai.yaml'],
     ['codex', 'skills/mhk-doctor/SKILL.md'],
-    ['claude', 'references/codex-migration.md'],
+    ['claude', 'references/codex-import.md'],
+    ['claude', 'commands/migrate.md'],
+    ['codex', 'skills/mhk-migrate/SKILL.md'],
     ['claude', 'commands/rules-add.md'],
     ['claude', 'commands/doctor.md'],
   ]) {
@@ -186,4 +223,27 @@ test('every layer playbook folder needs a destination on each platform', async t
   await rm(path.join(root, 'core/testing'), { recursive: true });
   await rm(path.join(root, 'core/rules/playbooks'), { recursive: true });
   await assert.rejects(assemblePlugins(root), /playbook destination declared for missing core\/rules\/playbooks/);
+});
+
+test('migration notes need a version name, a known kind per item, and no newer version than the package', () => {
+  assert.equal(compareVersions('0.10.0', '0.9.1') > 0, true);
+  assert.equal(compareVersions('1.2.3', '1.2.3'), 0);
+  const note = '# Rules\n\n## Item\nKind: edit\nFind: x\n';
+  assert.equal(validateMigrationNote('rules', '0.3.0.md.tmpl', note, '0.3.0'), '0.3.0');
+  assert.throws(() => validateMigrationNote('rules', 'next.md', note, '0.3.0'), /name must be/);
+  assert.throws(() => validateMigrationNote('rules', '0.4.0.md', note, '0.3.0'), /newer than the package/);
+  assert.throws(() => validateMigrationNote('rules', '0.3.0.md', note.replace('edit', 'rewrite'), '0.3.0'), /needs Kind/);
+  assert.throws(() => validateMigrationNote('rules', '0.3.0.md', '# Rules\n', '0.3.0'), /no items/);
+  assert.throws(() => validateMigrationNote('doctor', '0.3.0.md', note, '0.3.0'), /not a versioned layer/);
+});
+
+test('every layer migrations folder needs a destination on each platform', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'mhk-build-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const directory of ['core', 'adapters', 'package.json']) {
+    await cp(path.join(repositoryRoot, directory), path.join(root, directory), { recursive: true });
+  }
+  await mkdir(path.join(root, 'core/memory/migrations'), { recursive: true });
+  await writeFile(path.join(root, 'core/memory/migrations/0.3.0.md'), '# Memory\n\n## Item\nKind: edit\n');
+  await assert.rejects(assemblePlugins(root), /core\/memory\/migrations has no migration destination/);
 });

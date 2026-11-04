@@ -39,4 +39,4 @@ Commands: <command | cwd/prerequisites | inspected source; not executed>
 Open questions/boundaries: <only consequential missing evidence or project decisions>
 ```
 
-Keep supporting observations in this working report, not an additional inventory or permanent evidence file. On reruns or migration, account for every supplied item and preserve settled policies. Propose removals with reasons; absence from this scan is not proof of obsolescence. Missing evidence stays explicit, never invented. The caller can resolve remaining gaps with targeted reads.
+Keep supporting observations in this working report, not an additional inventory or permanent evidence file. On reruns or imports, account for every supplied item and preserve settled policies. Propose removals with reasons; absence from this scan is not proof of obsolescence. Missing evidence stays explicit, never invented. The caller can resolve remaining gaps with targeted reads.

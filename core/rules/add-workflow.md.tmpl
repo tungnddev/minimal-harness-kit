@@ -8,9 +8,13 @@ If the rule already exists, point to it and make no change. Otherwise keep the u
 
 {{> root_blocks }}
 
-On this fast path, write only inside the rules block; if it is absent, propose a minimal one. Preserve older rules-block markers here instead of upgrading them.
+{{> version_file }}
 
-Topic files under `{{rules_dir}}/` must start with `paths:` frontmatter and end with `<!-- mhk:generated -->`. Recognize the legacy `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` trailer as owned; preserve it on existing files. Never overwrite an unmarked topic; use a non-colliding destination or resolve the conflict. Keep scopes accurate and preserve other rules.
+{{> version_check }}
+
+On this fast path, write only inside the rules block; if it is absent, propose a minimal one.
+
+Topic files under `{{rules_dir}}/` must start with `paths:` frontmatter and end with `<!-- mhk:generated -->`. Never overwrite an unmarked topic; use a non-colliding destination or resolve the conflict. Keep scopes accurate and preserve other rules.
 
 {{> rule_discovery }}
 

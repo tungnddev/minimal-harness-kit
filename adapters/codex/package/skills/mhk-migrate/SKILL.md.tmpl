@@ -1,0 +1,15 @@
+---
+name: mhk-migrate
+description: Bring a repository's Codex mhk files up to the installed mhk version after an update, by applying the released migration notes without a code scan. Use only when explicitly invoked.
+---
+
+# mhk migrate for Codex
+
+Upgrade one repository's Codex mhk files — the `AGENTS.md` rules and memory blocks and the owned `.mhk/rules/*.md` files — to the installed mhk, {{version}}. Use the path given with the invocation, otherwise the current Git repository. Run it after updating mhk, or when another mhk skill or `$mhk-doctor` asks for it. Operate only on explicit invocation.
+
+- **Notes:** `references/migrations/<layer>/<version>.md` in this skill, one file per release that changed a layer's files.
+- **Memory block template:** [MEMORY_BLOCK.md](../mhk-memory/assets/MEMORY_BLOCK.md), for notes that write the memory block.
+- **Claude files** (`CLAUDE.md`, `.claude/`) and the `claude` entry are out of scope. If they exist, end the report with one line: run `/mhk:migrate` in Claude Code.
+- **Overrides.** A root `AGENTS.override.md` replaces `AGENTS.md`: report that the migrated blocks will not load while it does. Never edit overrides.
+
+{{> migrate_workflow }}

@@ -1,6 +1,6 @@
 {
   "name": "mhk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Minimal Harness Kit for Codex: verified project rules, shared team memory, and native permission proposals.",
   "author": {
     "name": "tungnd"

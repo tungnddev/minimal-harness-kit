@@ -19,8 +19,9 @@ Read, without scanning application code:
 
 - root `AGENTS.md` and `AGENTS.override.md`;
 - `.mhk/rules/` and which files carry the exact `<!-- mhk:generated -->` marker;
-- `CLAUDE.md` (and whether it has an mhk rules block: `<!-- mhk:rules:begin -->`, or an older `<!-- mhk:managed:begin -->` or `<!-- BEGIN: ai-guide -->`), `.claude/rules/`, `.claude/settings.json`;
-- `.codex/config.toml`.
+- `CLAUDE.md` (and whether it has an mhk rules block, in current or older markers), `.claude/rules/`, `.claude/settings.json`;
+- `.codex/config.toml`;
+- `.mhk/version.json`, then run the version check in §5 before any deep analysis.
 
 **Record the contents** (or a cryptographic digest) and existence of every file you read here and every destination you may write, including destinations that do not exist yet. Extend this record as verification reads additional sources or identifies destinations. You will compare against it before applying, to detect concurrent changes.
 
@@ -28,14 +29,12 @@ Read, without scanning application code:
 
 | Situation | Behavior |
 | --- | --- |
-| User explicitly requested `migrate` | Follow [migration.md](references/migration.md). If the Claude sources are missing, report that; do not invent a migration. |
-| User explicitly requested `fresh` | Follow [repo-cartographer.md](references/repo-cartographer.md). Preserve human guidance and ownership boundaries. |
-| Owned Codex output exists, no mode requested | Re-verify and converge it with the [repo-cartographer.md](references/repo-cartographer.md) method. Do not automatically import later Claude changes. |
-| Claude mhk output exists, owned Codex output does not | Ask once, before any deep analysis: **Migrate and verify existing Claude rules (recommended)** or **Fresh scan with Codex**. Wait for the answer. |
+| Owned Codex output exists | Re-verify and converge it with the [repo-cartographer.md](references/repo-cartographer.md) method. Do not automatically import later Claude changes. |
+| Claude mhk output exists, owned Codex output does not | Ask once, before any deep analysis: **Import and verify existing Claude rules (recommended)** or **Fresh scan with Codex**. Wait for the answer. |
 | Neither exists | Fresh scan. |
 | Only human-authored guidance exists | Treat it as policy and context. Fresh scan, adding owned output alongside it where safe. |
 
-"Migrate and verify" is recommended because it starts from a curated inventory; it is still the user's choice. An explicit mode in the invocation means do not ask again. **Choosing a mode is not approval to write its output.**
+"Import and verify" is recommended because it starts from a curated inventory; it is still the user's choice. When the invocation already makes the choice, such as importing Claude rules again or a fresh scan, follow it without asking. To import, follow [import.md](references/import.md); if the Claude sources are missing, report that and do not invent an import. A fresh scan follows [repo-cartographer.md](references/repo-cartographer.md), preserving human guidance and ownership boundaries. **Choosing is not approval to write.**
 
 A clean Claude harness or a clean doctor result on either platform is not verification. The doctors check surface health only.
 
@@ -45,8 +44,8 @@ Fresh scans must work with no Claude files present and no Claude plugin installe
 
 1. Load the selected reference and each playbook in `references/playbooks/` that matches a live package.
    Before verification and review, establish the protected-path baseline below.
-2. Verify (migration) or discover (scan) candidates read-only, producing the working report defined in [repo-cartographer.md](references/repo-cartographer.md). Read-only is an instruction here, not a tool-enforced sandbox; do not claim isolation.
-3. Resolve ambiguities that affect canonical exemplars, policies, or conflicting output (competing exemplar clusters, unresolved migration items).
+2. Verify (import) or discover (scan) candidates read-only, producing the working report defined in [repo-cartographer.md](references/repo-cartographer.md). Read-only is an instruction here, not a tool-enforced sandbox; do not claim isolation.
+3. Resolve ambiguities that affect canonical exemplars, policies, or conflicting output (competing exemplar clusters, unresolved import items).
 4. Apply the shared candidate verification/selection contract (§5), then draft the root block from [AGENTS_TEMPLATE.md](assets/AGENTS_TEMPLATE.md) and detailed documents from [RULES_TEMPLATE.md](assets/RULES_TEMPLATE.md). Templates show shape, not facts.
 5. If any hard constraint exists, evaluate native restrictions separately with [permissions.md](references/permissions.md).
 6. Audit the complete rendered draft using the shared audit contract (§5), revise and recheck affected guidance, then present the review (§6).
@@ -76,17 +75,43 @@ mhk writes to `AGENTS.md` only inside its own marked blocks, and each block belo
 - Everything outside mhk blocks is human-authored: preserve it, and read it as policy/context.
 - Blocks keep this order: rules, then memory. Place a missing block after any mhk block that comes before it in this order, otherwise at the end of the file. Create `AGENTS.md` if it does not exist.
 - Validate your block's markers before writing. A duplicate, mixed, or unmatched pair is a conflict: stop and ask.
-- The rules block's older markers — `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` and `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` — still mark the rules block. Only the full rules workflow upgrades them, as a separately labelled line in its approved diff.
+- Older markers still mark mhk files: `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` and `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` for the rules block, and the trailer `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` on topic files. Read them as owned; only `$mhk-migrate` converts them, and every workflow writes only the current forms.
+
+### Version file: `.mhk/version.json`
+
+`.mhk/version.json` records, per platform, the mhk version that platform's mhk files were last migrated to. It is committed with them, and holds versions only:
+
+```json
+{ "claude": "0.3.0", "codex": "0.3.0" }
+```
+
+- This platform's key is `codex`, and the installed mhk is 0.3.0. Read and write only this key; keep the other platform's entry unchanged.
+- This platform's mhk files are the mhk blocks in `AGENTS.md` and the owned topics in `.mhk/rules/`, in their current or older markers. The shared `.mhk/memory/` store does not count.
+- Migration notes ship for these layers. A note is pending when this platform has no entry, or when the note's version is newer than the entry.
+
+| Layer | Migration notes |
+| --- | --- |
+| rules | 0.3.0 |
+| memory | none |
+
+**Version check.** This skill writes the **rules** layer. Check the version file before any scan or draft:
+
+- This platform has mhk files but no entry → stop: they predate version tracking; run `$mhk-migrate` first.
+- The entry is newer than 0.3.0 → stop: a newer mhk wrote these files; update mhk first.
+- A note for the layer you write is pending → stop: run `$mhk-migrate` first.
+- The file isn't valid JSON, or the entry isn't a version → stop and ask the user to fix it.
+
+Otherwise continue and leave the entry unchanged: only `$mhk-migrate` moves it. The exception is a platform's first mhk files: when this platform has no mhk files and no entry, add the entry with 0.3.0 to the same diff, creating the file if it is missing.
 
 **Root `AGENTS.md`.** This skill owns only the rules block. If `AGENTS.md` has no rules block, add one alongside the existing content — never reinterpret the file as owned.
 
-Include a short repository description, verified common commands with working directories, essential guardrails, and the detailed-rule index. Include exemplars or consequential uncertainty only where useful, preserving in-band human resolutions beside their relevant guidance. Never write memory pointers: the memory block belongs to `$mhk-memory`. An older memory pointer inside the rules block is removed once `AGENTS.md` has a memory block; until then keep it. If there is no memory block, end the report with one line: team memory isn't set up — run `$mhk-memory`. Omit routine evidence labels and empty sections. Treat ~80 lines as a warning; the host's `project_doc_max_bytes` ceiling is a limit to report against, not the content budget.
+Include a short repository description, verified common commands with working directories, essential guardrails, and the detailed-rule index. Include exemplars or consequential uncertainty only where useful, preserving in-band human resolutions beside their relevant guidance. Never write memory pointers: the memory block belongs to `$mhk-memory`. If there is no memory block, end the report with one line: team memory isn't set up — run `$mhk-memory`. Omit routine evidence labels and empty sections. Treat ~80 lines as a warning; the host's `project_doc_max_bytes` ceiling is a limit to report against, not the content budget.
 
 ### Select and check
 
 Use the cartographer's compact report to choose useful overview guidance. Keep the target repository read-only until approval. Reuse its sources; make targeted reads only where a consequential claim is unsupported or unclear. Do not repeat the scan or require a separate evidence/decision table.
 
-Check that named paths, commands, and APIs have support. Preserve command working directories, prerequisites, and meaningful test limitations; distinguish inspection from execution. Keep observed preferences scoped, preserve explicit policy and known exceptions, and describe exemplars by the aspect they illustrate. Ask only for consequential missing information or project intent, respecting settled decisions. Omit weak new claims; account for unresolved existing items rather than silently dropping them.
+Check that named paths, commands, and APIs have support. Preserve command working directories and prerequisites. List only commands that exist; omit a missing kind instead of stating that it is absent. Distinguish inspection from execution. Keep observed preferences scoped, preserve explicit policy and known exceptions, and describe exemplars by the aspect they illustrate. Ask only for consequential missing information or project intent, respecting settled decisions. Omit weak new claims; account for unresolved existing items rather than silently dropping them.
 
 ### Render concise guidance
 
@@ -121,7 +146,7 @@ Read back applied files against the approved content. Check markers/frontmatter,
 
 **Loading conflicts.** Codex selects at most one instruction file per directory on the path from the repository root to the session's working directory. A selected root `AGENTS.override.md` replaces the root `AGENTS.md`; report that the generated root block will not load in that case. An override in a deeper directory replaces only that directory's `AGENTS.md`: the root file still loads, while deeper guidance can supersede conflicting root instructions. Distinguish a file excluded from loading from a conflict between loaded instructions; never delete overrides. Check the actual load path and selected files, and report when their combined size approaches the host size limit.
 
-**Legacy markers.** The rules block's older markers (see *mhk blocks* above) and the `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` rules-file trailer still mark mhk-owned content. Whenever you propose changes to such an owned file, include upgrading its markers to `<!-- mhk:rules:begin -->` / `<!-- mhk:rules:end -->` and `<!-- mhk:generated -->` as a separately labelled line in the diff — never rewrite markers silently or without approval. A block must open and close with the same generation of marker; a mixed or unmatched pair is malformed — stop and ask. Claude sources read during migration stay read-only: their legacy markers are recognized, never upgraded by this skill.
+**Claude sources.** Claude files read during an import stay read-only: their older markers are recognized, never converted by this skill.
 
 **Ownership.** Modify or remove only provably mhk-owned content: the rules block, and `.mhk/rules/` files with the exact marker. An unowned destination file is a conflict — propose a non-colliding destination or ask; never overwrite or delete it. Keep native permission proposals out of instructional files and never equate a rule sentence with enforcement.
 
@@ -131,7 +156,7 @@ Read back applied files against the approved content. Check markers/frontmatter,
 
 Before writing anything, present:
 
-1. the verification (migration summary) or scan summary, plus the shared audit summary: meaningful changes, retained policies, important retrieval gaps, and remaining limitations;
+1. the verification (import summary) or scan summary, plus the shared audit summary: meaningful changes, retained policies, important retrieval gaps, and remaining limitations;
 2. every add / change / remove, and every unresolved finding with its question;
 3. the complete proposed content or diff for **every** affected file — including new, untracked files;
 4. native permission changes as a separately labeled diff, with each restriction's status: enforced (validated), advisory, unsupported, unverified, or inactive due to configuration precedence.
@@ -154,4 +179,4 @@ State plainly in the final report that the index is **model-directed retrieval**
 
 ## 8. Reruns
 
-Re-verify existing Codex items and look for relevant new discoveries with the [repo-cartographer.md](references/repo-cartographer.md) method, passing it the existing items so its report accounts for each source item and its disposition. Compare current evidence with every owned item — root-block lines, index rows, `.mhk/rules/` files, catalog rows, exemplars: correct stale locations and commands with targeted reads, without a prevalence census. Preserve verified wording, filenames, ordering, and human resolutions by default, including in-band `divergence resolved` comments unless the clusters have materially changed. The shared audit may propose a justified correction or consolidation with each original item accounted for, the reason, and the destination of retained meaning. Unchanged evidence and no concrete audit defect mean no diff. Remove obsolete or redundant owned content only with evidence/reason and approval. Do not keep a bookkeeping file or manifest; the owned files and in-band markers are the whole state.
+Re-verify existing Codex items and look for relevant new discoveries with the [repo-cartographer.md](references/repo-cartographer.md) method, passing it the existing items so its report accounts for each source item and its disposition. Compare current evidence with every owned item — root-block lines, index rows, `.mhk/rules/` files, catalog rows, exemplars: correct stale locations and commands with targeted reads, without a prevalence census. Preserve verified wording, filenames, ordering, and human resolutions by default, including in-band `divergence resolved` comments unless the clusters have materially changed. The shared audit may propose a justified correction or consolidation with each original item accounted for, the reason, and the destination of retained meaning. Unchanged evidence and no concrete audit defect mean no diff. Remove obsolete or redundant owned content only with evidence/reason and approval. Do not keep a bookkeeping file or manifest; the owned files, their in-band markers, and this platform's entry in `.mhk/version.json` are the whole state.

@@ -26,7 +26,7 @@ These documents are not loaded automatically. During planning and before creatin
 | Database migrations (`**/migrations/**`) | applied files are immutable; migration workflow | [migrations](.mhk/rules/migrations.md) |
 <!-- mhk:rules:end -->
 
-Keep essential cross-cutting guardrails and common verified commands in the root; put layer-specific details, specialized procedures, and exemplars with their relevant topic. A pointer must make that topic discoverable during planning and new-file creation. Combine a consequential guardrail with its pointer where possible. Do not repeat full rules in the routing section.
+List only commands the project has; omit a missing kind (no `test: none`). Keep essential cross-cutting guardrails and common verified commands in the root; put layer-specific details, specialized procedures, and exemplars with their relevant topic. A pointer must make that topic discoverable during planning and new-file creation. Combine a consequential guardrail with its pointer where possible. Do not repeat full rules in the routing section.
 
 An exemplar topic can say `New endpoint: mirror internal/users/; register its route in internal/router/routes.go`. Recommend it only after checking live usage, suitability, and invisible wiring. Retain any settled divergence as a brief in-band comment beside that guidance; keep confirmed legacy anti-exemplars relevant to the same task. Do not copy implementation shapes into instructions.
 

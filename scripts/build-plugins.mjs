@@ -12,7 +12,15 @@ const sharedFragments = {
   root_blocks: 'core/shared/root-blocks.md.tmpl',
   memory_store: 'core/memory/store.md.tmpl',
   doctor_workflow: 'core/doctor/workflow.md.tmpl',
+  version_file: 'core/shared/version-file.md.tmpl',
+  version_check: 'core/shared/version-check.md.tmpl',
+  migrate_workflow: 'core/migrate/workflow.md.tmpl',
 };
+// Layers whose files .mhk/version.json versions, in report order.
+const versionedLayers = ['rules', 'memory'];
+const migrationKinds = ['edit', 'restructure', 'remove', 'flag', 'rerun'];
+// Folders a layer may ship from core/<layer>/; each needs a destination per platform.
+const shippedFolders = { playbooks: 'playbook', migrations: 'migration' };
 const platformFragments = [
   'rule_loading', 'rule_discovery', 'rule_audit', 'enforcement_claims', 'permission_proposals',
 ];
@@ -24,12 +32,15 @@ const targets = {
       rule_commands: '`/mhk:rules`, `/mhk:doctor`, `/mhk:rules-add`',
       rules_command: '`/mhk:rules`',
       memory_command: '`/mhk:memory`',
+      migrate_command: '`/mhk:migrate`',
+      platform_key: 'claude',
       cartographer_link: '../agents/repo-cartographer.md',
     },
-    // Destination of each core/<layer>/playbooks/ folder.
+    // Destination of each core/<layer>/<folder>/.
     playbooks: { rules: 'playbooks/rules' },
+    migrations: { rules: 'migrations/rules' },
     manifest: '.claude-plugin/plugin.json',
-    required: ['commands/rules.md', 'commands/rules-add.md', 'commands/memory.md', 'commands/doctor.md', 'references/codex-migration.md', 'agents/repo-cartographer.md', 'templates/RULES_TEMPLATE.md', 'templates/MEMORY_BLOCK.md', 'templates/MEMORY_TEMPLATE.md'],
+    required: ['commands/rules.md', 'commands/rules-add.md', 'commands/memory.md', 'commands/doctor.md', 'commands/migrate.md', 'references/codex-import.md', 'agents/repo-cartographer.md', 'templates/RULES_TEMPLATE.md', 'templates/MEMORY_BLOCK.md', 'templates/MEMORY_TEMPLATE.md'],
   },
   codex: {
     variables: {
@@ -38,11 +49,14 @@ const targets = {
       rule_commands: '`$mhk-rules`, `$mhk-rules-add`',
       rules_command: '`$mhk-rules`',
       memory_command: '`$mhk-memory`',
+      migrate_command: '`$mhk-migrate`',
+      platform_key: 'codex',
       cartographer_link: '../references/repo-cartographer.md',
     },
     playbooks: { rules: 'skills/mhk-rules/references/playbooks' },
+    migrations: { rules: 'skills/mhk-migrate/references/migrations/rules' },
     manifest: '.codex-plugin/plugin.json',
-    required: ['skills/mhk-rules/SKILL.md', 'skills/mhk-rules-add/SKILL.md', 'skills/mhk-rules-add/agents/openai.yaml', 'skills/mhk-rules/references/repo-cartographer.md', 'skills/mhk-rules/assets/RULES_TEMPLATE.md', 'skills/mhk-memory/SKILL.md', 'skills/mhk-memory/agents/openai.yaml', 'skills/mhk-memory/assets/MEMORY_BLOCK.md', 'skills/mhk-memory/assets/MEMORY_TEMPLATE.md', 'skills/mhk-doctor/SKILL.md', 'skills/mhk-doctor/agents/openai.yaml'],
+    required: ['skills/mhk-migrate/SKILL.md', 'skills/mhk-migrate/agents/openai.yaml', 'skills/mhk-rules/SKILL.md', 'skills/mhk-rules-add/SKILL.md', 'skills/mhk-rules-add/agents/openai.yaml', 'skills/mhk-rules/references/repo-cartographer.md', 'skills/mhk-rules/assets/RULES_TEMPLATE.md', 'skills/mhk-memory/SKILL.md', 'skills/mhk-memory/agents/openai.yaml', 'skills/mhk-memory/assets/MEMORY_BLOCK.md', 'skills/mhk-memory/assets/MEMORY_TEMPLATE.md', 'skills/mhk-doctor/SKILL.md', 'skills/mhk-doctor/agents/openai.yaml'],
   },
 };
 
@@ -74,14 +88,53 @@ async function filesUnder(directory) {
   return files;
 }
 
-async function playbookLayers(root) {
+async function layersWith(root, folder) {
   const layers = [];
   for (const entry of await readdir(path.join(root, 'core'), { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const children = await readdir(path.join(root, 'core', entry.name), { withFileTypes: true });
-    if (children.some(child => child.isDirectory() && child.name === 'playbooks')) layers.push(entry.name);
+    if (children.some(child => child.isDirectory() && child.name === folder)) layers.push(entry.name);
   }
   return layers.sort();
+}
+
+const semver = version => version.split('.').map(Number);
+export function compareVersions(a, b) {
+  const [x, y] = [semver(a), semver(b)];
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return 0;
+}
+
+// A note is core/<layer>/migrations/<version>.md(.tmpl): items under `## ` headings, each with one Kind.
+export function validateMigrationNote(layer, filename, content, version) {
+  const match = filename.match(/^(\d+\.\d+\.\d+)\.md(?:\.tmpl)?$/);
+  if (!match) throw new Error(`core/${layer}/migrations/${filename}: name must be <x.y.z>.md`);
+  if (!versionedLayers.includes(layer)) throw new Error(`core/${layer}/migrations: ${layer} is not a versioned layer`);
+  if (compareVersions(match[1], version) > 0) throw new Error(`core/${layer}/migrations/${filename}: newer than the package version ${version}`);
+  const items = content.split(/^## /m).slice(1);
+  if (!items.length) throw new Error(`core/${layer}/migrations/${filename}: no items`);
+  for (const item of items) {
+    const kind = item.match(/^Kind: (\S+)$/m)?.[1];
+    if (!migrationKinds.includes(kind)) throw new Error(`core/${layer}/migrations/${filename}: item "${item.split('\n')[0]}" needs Kind: ${migrationKinds.join(' | ')}`);
+  }
+  return match[1];
+}
+
+export async function migrationTable(root, version) {
+  const rows = ['| Layer | Migration notes |', '| --- | --- |'];
+  for (const layer of versionedLayers) {
+    let filenames = [];
+    try { filenames = await filesUnder(path.join(root, 'core', layer, 'migrations')); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    const versions = [];
+    for (const filename of filenames) {
+      const content = await readFile(path.join(root, 'core', layer, 'migrations', filename), 'utf8');
+      versions.push(validateMigrationNote(layer, filename, content, version));
+    }
+    versions.sort(compareVersions);
+    rows.push(`| ${layer} | ${versions.join(', ') || 'none'} |`);
+  }
+  return rows.join('\n');
 }
 
 function withSourceNotice(content, source) {
@@ -129,15 +182,19 @@ export function validatePackage(platform, files) {
 
 export async function assemblePlugins(root = repositoryRoot) {
   const packages = new Map();
-  const layers = await playbookLayers(root);
+  const shipped = {};
+  for (const folder of Object.keys(shippedFolders)) shipped[folder] = await layersWith(root, folder);
   // The root package.json is the only place the release version is written.
   const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  const migration_notes = await migrationTable(root, version);
   for (const [platform, target] of Object.entries(targets)) {
-    const variables = { ...target.variables, version };
-    // A layer's playbooks must ship somewhere; a declared destination must have playbooks.
-    for (const layer of new Set([...layers, ...Object.keys(target.playbooks)])) {
-      if (!layers.includes(layer)) throw new Error(`${platform}: playbook destination declared for missing core/${layer}/playbooks`);
-      if (!target.playbooks[layer]) throw new Error(`${platform}: core/${layer}/playbooks has no playbook destination`);
+    const variables = { ...target.variables, version, migration_notes };
+    // A layer's folder must ship somewhere; a declared destination must have a folder.
+    for (const [folder, noun] of Object.entries(shippedFolders)) {
+      for (const layer of new Set([...shipped[folder], ...Object.keys(target[folder])])) {
+        if (!shipped[folder].includes(layer)) throw new Error(`${platform}: ${noun} destination declared for missing core/${layer}/${folder}`);
+        if (!target[folder][layer]) throw new Error(`${platform}: core/${layer}/${folder} has no ${noun} destination`);
+      }
     }
     const fragments = {};
     const sources = { ...sharedFragments };
@@ -154,10 +211,13 @@ export async function assemblePlugins(root = repositoryRoot) {
       const content = await readFile(path.join(root, source), 'utf8');
       add(filename.replace(/\.tmpl$/, ''), filename.endsWith('.tmpl') ? renderTemplate(content, variables, fragments) : content, source);
     }
-    for (const layer of layers) {
-      for (const filename of await filesUnder(path.join(root, 'core', layer, 'playbooks'))) {
-        const source = `core/${layer}/playbooks/${filename}`;
-        add(`${target.playbooks[layer]}/${filename}`, await readFile(path.join(root, source), 'utf8'), source);
+    for (const [folder, layers] of Object.entries(shipped)) {
+      for (const layer of layers) {
+        for (const filename of await filesUnder(path.join(root, 'core', layer, folder))) {
+          const source = `core/${layer}/${folder}/${filename}`;
+          const content = await readFile(path.join(root, source), 'utf8');
+          add(`${target[folder][layer]}/${filename.replace(/\.tmpl$/, '')}`, filename.endsWith('.tmpl') ? renderTemplate(content, variables, fragments) : content, source);
+        }
       }
     }
     validatePackage(platform, files);

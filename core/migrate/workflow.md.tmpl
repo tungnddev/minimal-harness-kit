@@ -1,0 +1,54 @@
+## What this command does
+
+It brings this platform's existing mhk files up to the format of the installed mhk, {{version}}, by applying the migration notes released since they were last migrated. Then it records {{version}} in `.mhk/version.json`. It is the fast path after updating mhk:
+
+- It never scans the code, never invokes a discovery subagent, and never runs builds, tests, installs or generators. A note that needs new evidence names the command to rerun instead.
+- It changes only mhk-owned text: the mhk blocks in `{{root_file}}` and the owned topics in `{{rules_dir}}/`. Unlike the other workflows, it may edit every mhk block of this platform, but only as a note directs. Text outside mhk-owned files is reported, never edited.
+- It never sets up a layer that isn't there: {{rules_command}} and {{memory_command}} do that, and the doctor lists layers that are not set up. Converting an older form of a layer that is there is a migration, not a setup.
+- It changes only this platform's files and this platform's entry in `.mhk/version.json`.
+
+{{> root_blocks }}
+
+{{> version_file }}
+
+## 1. Inventory
+
+Read `{{root_file}}`, the owned topics in `{{rules_dir}}/`, and `.mhk/version.json`. Find each layer's files by their markers, current or older. Stop and ask the user to fix it by hand when a marker pair is duplicated, mixed or unmatched, when `.mhk/version.json` isn't valid JSON, or when this platform's entry isn't a version.
+
+## 2. Pick the notes
+
+- This platform has no mhk files: there is nothing to migrate. Say which command sets up each layer, and write nothing.
+- The entry is newer than {{version}}: stop. A newer mhk wrote these files; update mhk first.
+- Otherwise, for each layer that has files, take its pending notes, oldest first. With no entry, every note is pending. Notes describe the older shape, so files already in the current shape match nothing.
+- Nothing pending and the entry is {{version}}: report that the files are up to date, and write nothing.
+- Nothing pending and the entry is older: the only change is the entry.
+
+## 3. Draft
+
+Read each picked note. Each item has one kind:
+
+| Kind | Action |
+| --- | --- |
+| `edit` | Change text inside mhk-owned files. |
+| `restructure` | Rename, move or split mhk-owned files or markers, keeping their content. |
+| `remove` | Delete an mhk-owned file or section that mhk no longer uses. |
+| `flag` | Needs a person: show the evidence and ask; change nothing. |
+| `rerun` | Needs new evidence from the code: name the command to run and why; change nothing. |
+
+Apply the items in version order to a draft kept outside the repository. Where two items touch the same text, the later note wins. Apply an item only where its Find matches, and leave everything else exactly as it is, including lines people added inside the blocks. Make a targeted read only where an item asks for one.
+
+## 4. Review
+
+Before writing anything, present:
+
+1. one complete diff per affected file, each change labelled with its note version and item title;
+2. each flag, with the lines involved and its question;
+3. each rerun, with the command and the reason;
+4. text outside mhk-owned files that an item matched, as a report only;
+5. the entry change, such as `"{{platform_key}}": "0.2.0"` → `"{{platform_key}}": "{{version}}"`, or the new file.
+
+Allow approval or rejection per file. A rejected change and an unanswered flag both count as reviewed: the entry still moves, so they are not raised again. Rejecting the whole migration writes nothing, the entry included.
+
+## 5. Write and read back
+
+Write only the approved files. Then set this platform's entry to {{version}}, keeping the other platform's entry, and create `.mhk/version.json` if it is missing. Read each file back against the approved content, and check that every block's markers are single, current and well-formed, and that every owned topic ends with the exact `<!-- mhk:generated -->`. Report mismatches instead of silently changing approved content. Never commit.

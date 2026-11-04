@@ -1,0 +1,5 @@
+interface:
+  display_name: "mhk migrate"
+  short_description: "Bring mhk files up to the installed version"
+policy:
+  allow_implicit_invocation: false

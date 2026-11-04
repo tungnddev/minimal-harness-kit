@@ -6,15 +6,20 @@
 minimal-harness-kit/
 ├── core/                            # shared, editable source; one folder per layer
 │   ├── shared/
-│   │   └── root-blocks.md.tmpl      # one marked block per layer in CLAUDE.md / AGENTS.md
+│   │   ├── root-blocks.md.tmpl      # one marked block per layer in CLAUDE.md / AGENTS.md
+│   │   ├── version-file.md.tmpl     # .mhk/version.json and the pending-note table
+│   │   └── version-check.md.tmpl    # the check every writing workflow runs first
 │   ├── rules/
 │   │   ├── cartographer.md          # neutral discovery method + report contract
 │   │   ├── playbooks/               # backend, frontend, mobile
+│   │   ├── migrations/              # one note per release that changed what the layer writes
 │   │   ├── workflow.md.tmpl         # verification, rendering, complete-draft audit
 │   │   ├── add-workflow.md.tmpl     # one supplied rule: input, verify, review, add
 │   │   └── templates/rules.md.tmpl  # rule, catalog, discipline examples
 │   ├── memory/
 │   │   └── store.md.tmpl            # shared .mhk/memory format and derived index
+│   ├── migrate/
+│   │   └── workflow.md.tmpl         # apply pending notes to owned files, then move the version entry
 │   └── doctor/
 │       └── workflow.md.tmpl         # read-only checklist and report format for both doctors
 ├── adapters/
@@ -22,14 +27,14 @@ minimal-harness-kit/
 │   │   ├── package/                # manifest, commands, agent wrapper, root/memory templates
 │   │   └── fragments/              # loading, signposts, permission behavior
 │   └── codex/
-│       ├── package/                # manifest, skills, scan wrapper, migration, permissions, root/memory templates
+│       ├── package/                # manifest, skills, scan wrapper, import, permissions, root/memory templates
 │       └── fragments/              # loading, index rows, permission behavior
 ├── scripts/
 │   ├── build-plugins.mjs            # deterministic assembly and package validation
 │   └── build-plugins.test.mjs
 ├── plugins/                        # generated, committed, independently installable
-│   ├── claude/                     # .claude-plugin/, commands/, agents/, playbooks/rules/, templates/
-│   └── codex/                      # .codex-plugin/, skills/mhk-rules{,-add}/, skills/mhk-memory/, skills/mhk-doctor/
+│   ├── claude/                     # .claude-plugin/, commands/, agents/, playbooks/rules/, migrations/rules/, templates/
+│   └── codex/                      # .codex-plugin/, skills/mhk-rules{,-add}/, skills/mhk-memory/, skills/mhk-migrate/, skills/mhk-doctor/
 ├── .claude-plugin/marketplace.json  # catalog → ./plugins/claude
 ├── .agents/plugins/marketplace.json # catalog → ./plugins/codex
 └── cli/                            # consumer CLI placeholder
@@ -39,7 +44,7 @@ This repository develops the plugins; neither package is automatically loaded wh
 
 ## Build-time composition
 
-Edit `core/` for shared behavior and `adapters/<platform>/` for platform behavior. `adapters/<platform>/package/` mirrors the installed package layout. Plain files are copied; `.tmpl` files are expanded and lose that suffix. Each layer's playbooks are copied into each package, to the destination the build declares for that layer; a playbook folder without a destination, or a destination without a folder, fails the build. Generated Markdown includes a source notice after any leading YAML frontmatter.
+Edit `core/` for shared behavior and `adapters/<platform>/` for platform behavior. `adapters/<platform>/package/` mirrors the installed package layout. Plain files are copied; `.tmpl` files are expanded and lose that suffix. Each layer's `playbooks/` and `migrations/` folders are shipped into each package, to the destination the build declares for that layer; a folder without a destination, or a destination without a folder, fails the build. Migration notes are rendered like templates, so they name each platform's own files. Generated Markdown includes a source notice after any leading YAML frontmatter.
 
 `core/` has one folder per layer, including single-file layers. Text used by several layers lives in `core/shared/`. When a layer's text becomes shared, extract that part into `shared/` and include it; don't move the layer's file. Commands that span layers, such as doctor, get their own folder beside the layers. File names inside a folder are short (`rules/workflow.md.tmpl`), and the build's fragment names keep the layer prefix (`rules_workflow`), so templates don't depend on source paths. Layers that generate project files use the same inner layout: `workflow.md.tmpl`, discovery, `templates/`, `playbooks/`. Adapters keep the installed package layout, grouped by file type, with layer prefixes in file names.
 
@@ -48,11 +53,11 @@ Templates support only two constructs:
 - `{{root_file}}`, `{{rules_dir}}`, and other explicitly declared scalars substitute concrete names and paths.
 - `{{> rule_discovery }}` and other named fragments insert complete paragraphs. Fragments can include shared content, but cycles are rejected.
 
-Variables, fragment mappings, and playbook destinations are declared in `scripts/build-plugins.mjs`. There are no template conditionals or expressions. Platform behavior is authored in adapter fragments, so installed instructions contain concrete paths and only the relevant loading/enforcement behavior. The model never interprets a term map or template variables. Host-provided syntax such as `${CLAUDE_PLUGIN_ROOT}` and `$ARGUMENTS` remains intact.
+Variables, fragment mappings, and playbook and migration destinations are declared in `scripts/build-plugins.mjs`. The build also generates `{{migration_notes}}`, a table of each versioned layer's note versions, so every workflow knows what is pending without opening the notes. There are no template conditionals or expressions. Platform behavior is authored in adapter fragments, so installed instructions contain concrete paths and only the relevant loading/enforcement behavior. The model never interprets a term map or template variables. Host-provided syntax such as `${CLAUDE_PLUGIN_ROOT}` and `$ARGUMENTS` remains intact.
 
-The two root templates remain separately authored because their layouts differ. Manifests, invocation metadata, migration handling, native permissions, and scan execution also belong to adapters.
+The two root templates remain separately authored because their layouts differ. Manifests, invocation metadata, import handling, native permissions, and scan execution also belong to adapters.
 
-`core/rules/add-workflow.md.tmpl` supplies the compact input/verify/review/add flow to both `/mhk:rules-add` and `$mhk-rules-add`; it does not invoke discovery or alter native settings. `core/shared/root-blocks.md.tmpl` gives every rules and memory workflow the same block-ownership rules for `CLAUDE.md` and `AGENTS.md`. `core/memory/store.md.tmpl` defines the shared `.mhk/memory/` format and derived index, so both plugins write identical stores. `core/doctor/workflow.md.tmpl` gives `/mhk:doctor` and `$mhk-doctor` one read-only checklist and report format, checked against the same block and store contracts; each adapter adds only its routing, loading, and native-memory specifics. Migration references are loaded only in migration mode: Codex imports Claude guidance, and Claude imports Codex guidance. Each preserves source files and translates retrieval and permission intent for its own host.
+`core/rules/add-workflow.md.tmpl` supplies the compact input/verify/review/add flow to both `/mhk:rules-add` and `$mhk-rules-add`; it does not invoke discovery or alter native settings. `core/shared/root-blocks.md.tmpl` gives every rules and memory workflow the same block-ownership rules for `CLAUDE.md` and `AGENTS.md`. `core/memory/store.md.tmpl` defines the shared `.mhk/memory/` format and derived index, so both plugins write identical stores. `core/doctor/workflow.md.tmpl` gives `/mhk:doctor` and `$mhk-doctor` one read-only checklist and report format, checked against the same block and store contracts; each adapter adds only its routing, loading, and native-memory specifics. `core/migrate/workflow.md.tmpl` gives `/mhk:migrate` and `$mhk-migrate` one flow that applies pending notes to owned text without a scan; `core/shared/version-file.md.tmpl` and `version-check.md.tmpl` give every writer the same version contract. Import references are loaded only when the user chooses to import: Codex imports Claude guidance, and Claude imports Codex guidance. Each preserves source files and translates retrieval and permission intent for its own host.
 
 ## Discovery and rendering
 
@@ -100,8 +105,9 @@ CI runs the build tests and the drift check. Tests cover concrete platform outpu
 The release version is written only in the root `package.json`. The build fills `{{version}}` in both plugin manifests from it, and a test checks that they match. Claude Code and Codex download a new copy only when the version changes, so pushing commits without a version change reaches no installed user. To release:
 
 1. `npm version <x.y.z> --no-git-tag-version`, then `npm run build:plugins`.
-2. Add the release to [CHANGELOG.md](../CHANGELOG.md).
-3. Commit, tag `v<x.y.z>`, and push the commit and the tag.
+2. If the release changes what a layer writes, add `core/<layer>/migrations/<x.y.z>.md.tmpl`: one `## ` item per change, each with `Kind:` (`edit`, `restructure`, `remove`, `flag` or `rerun`), `Where:`, `Find:` (the older shape), `Change:` or `Report:`, and `Why:`. Write Find so files already in the new shape match nothing. The build rejects a note newer than the package version or an item without a known kind. Changes that only alter how a workflow works, not what it writes, need no note.
+3. Add the release to [CHANGELOG.md](../CHANGELOG.md), with a line telling users to run the migrate workflow when a note shipped.
+4. Commit, tag `v<x.y.z>`, and push the commit and the tag.
 
 ## Scope
 

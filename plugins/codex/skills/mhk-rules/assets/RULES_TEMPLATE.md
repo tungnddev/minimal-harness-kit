@@ -4,7 +4,7 @@ Shape example for `.mhk/rules/<topic>.md`; content is illustrative, not project 
 
 Keep a topic focused: short rules, a useful lookup table, and relevant exemplar pointers with essential wiring. Give detail one home and retain important scope exceptions and settled decisions. Prefer pointers to live code over copied implementations.
 
-`paths:` frontmatter must come first; do not add root block markers. Every owned topic ends with `<!-- mhk:generated -->`. Only that exact marker or the legacy `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` proves ownership. Preserve unmarked human files. Propose legacy-marker upgrades explicitly in the approved diff; write only the current form.
+`paths:` frontmatter must come first; do not add root block markers. Every owned topic ends with `<!-- mhk:generated -->`; only that marker, or its older form listed with the root blocks, proves ownership. Preserve unmarked human files.
 
 Codex reaches `.mhk/rules/` documents through the index in `AGENTS.md`. The `paths:` field is scope metadata; it does not cause automatic loading. The index must make the document discoverable during planning and before creating or editing files.
 

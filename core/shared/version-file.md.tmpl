@@ -1,0 +1,13 @@
+### Version file: `.mhk/version.json`
+
+`.mhk/version.json` records, per platform, the mhk version that platform's mhk files were last migrated to. It is committed with them, and holds versions only:
+
+```json
+{ "claude": "{{version}}", "codex": "{{version}}" }
+```
+
+- This platform's key is `{{platform_key}}`, and the installed mhk is {{version}}. Read and write only this key; keep the other platform's entry unchanged.
+- This platform's mhk files are the mhk blocks in `{{root_file}}` and the owned topics in `{{rules_dir}}/`, in their current or older markers. The shared `.mhk/memory/` store does not count.
+- Migration notes ship for these layers. A note is pending when this platform has no entry, or when the note's version is newer than the entry.
+
+{{migration_notes}}

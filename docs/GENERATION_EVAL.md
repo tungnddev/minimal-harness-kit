@@ -1,4 +1,4 @@
-# Manual rules and memory evaluation
+# Manual rules, memory and migrate evaluation
 
 This is a regression and acceptance checklist for the implemented Claude Code and Codex plugins, not a record of individual test results. Run it when changing workflows, packaging, or host integration, against disposable consumer repositories using the installed plugin rather than loading source skills directly.
 
@@ -25,11 +25,12 @@ These validate package assembly and references only. In each consumer fixture, i
 | Changed source | A moved helper or changed command produces a supported correction without dropping unrelated policy |
 | One-rule addition | Targeted verification and exact wording/placement review; no full scan or native-setting changes |
 | Duplicate addition | Existing rule is identified and no file changes |
-| Migration in each direction | Source guidance is verified and source files remain unchanged; destination retrieval is translated |
+| Import in each direction | With only the other platform's rules present, **Import and verify** is offered; source guidance is verified, source files remain unchanged, destination retrieval is translated |
 | Existing destination | Ordinary rerun does not silently import later source-platform changes |
-| Legacy markers | Full rules workflow labels proposed upgrades; `rules-add` preserves old markers |
 | Partial approval | Applied subset has no dangling topic links or rejected rules |
 | Native restrictions | Separate review; enforcement is claimed only when actually validated |
+| Commands | No `test: none`, "No test project" or similar line for a kind of command the project lacks |
+| First files | A repository with no mhk files gets this platform's `.mhk/version.json` entry in the same diff |
 
 In a new session, try a task that reads an existing scoped file, a planning task, and a task creating a new file. Observe which guidance the agent actually reads and uses. For Codex, confirm documents are opened through index instructions rather than assuming `paths:` triggers loading. Repeat with a root `AGENTS.override.md` and confirm the loading limitation is reported.
 
@@ -48,11 +49,27 @@ In a new session, try a task that reads an existing scoped file, a planning task
 | Missing native copy | A teammate's fact is retained; absence on this machine is not treated as staleness |
 | Stale or conflicting fact | Evidence and proposed correction/removal go to review; no silent overwrite |
 | Rules duplication | Agent offers the appropriate rules workflow rather than editing rules during memory maintenance |
-| Legacy memory pointer | Memory setup leaves the old rules pointer; the next full rules run removes it after the memory block exists |
 
 For Claude, also check the native-memory sweep: an eligible unshared fact is proposed, an already-shared fact is unchanged, volatile-only differences produce no update, and native memory remains untouched. Use synthetic personal/sensitive examples to confirm they are excluded without printing real sensitive data. For Codex, confirm memory setup, capture, and maintenance work without access to native personal memory.
 
 Check that full memory maintenance writes only its root block and the memory store, and that capture never deletes facts. Check malformed and duplicate block markers are reported before writing. No case should create a commit.
+
+## Migrate cases — run on both platforms
+
+Use a repository whose mhk files came from 0.2.0 or earlier and that has no `.mhk/version.json`, such as one with a `test: none` line, an older marker, or an older memory pointer.
+
+| Case | Expected observation |
+| --- | --- |
+| Writers before migrating | `/mhk:rules`, `/mhk:rules-add` and `/mhk:memory` stop and point to the migrate workflow before scanning or drafting |
+| First migration | No scan or subagent; one diff per file, each change labelled with its note; absent-kind lines removed, a combined line keeps its run policy; older markers converted; the entry is created with the installed version |
+| Older memory pointer | Removed from the rules block; a memory block is added after it when none exists |
+| Lost exception | A kept prohibition whose source has an exception is flagged with both lines; nothing changes without an answer |
+| Text outside mhk blocks | Matching human text is reported, never edited |
+| Partial approval | Rejected changes are not written and are not proposed again; the entry still moves |
+| Second run | "Up to date" and no diff |
+| No pending note, older entry | The only proposed change is the entry |
+| Newer entry | Set the entry above the installed version: migrate and every writer refuse to write |
+| Other platform | Its files and entry are untouched; the report points to that platform's migrate workflow |
 
 ## Doctor cases — run on both platforms
 
@@ -66,9 +83,10 @@ Check that full memory maintenance writes only its root block and the memory sto
 | Unsafe fact | A synthetic email address in a fact is flagged by file and kind, without printing it |
 | Untracked or ignored output | Warning with commit or ignore-rule guidance; tracked edits are informational |
 | Age and unshared native facts | Old rule history and Claude native facts without a shared copy are informational, not warnings |
-| Report contract | Rules, Memory, Sharing, then the other platform when present; findings use the defined marks and end with counts and ordered next actions |
+| Report contract | Version, Rules, Memory, Sharing, then the other platform when present; findings use the defined marks and end with counts and ordered next actions, a pending migration first |
+| Version | No entry with mhk files, a pending note, and an entry newer than the installed mhk are warnings; invalid JSON is an error; an older entry with nothing pending is informational |
 | Fact conflict | Conflict markers in a fact are an error requiring a human merge; index conflicts route to memory regeneration |
-| Other platform present | Detection points to that platform's doctor; migration is suggested only when the current platform has no rules block; the other platform's rules are not checked |
+| Other platform present | Detection points to that platform's doctor; an import is suggested only when the current platform has no rules block; the other platform's rules and entry are not checked |
 | Codex override | A root `AGENTS.override.md` is reported as preventing both blocks from loading |
 | Invocation and writes | Doctor runs only when typed; no builds, tests, installs, deep scans, diffs, or fix offers; repository and native memory remain unchanged |
 

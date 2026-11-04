@@ -38,9 +38,15 @@ Your project has a way of doing things: the command that actually runs the tests
 | --- | --- | --- | --- |
 | **Rules** | Real commands, project rules, helpers to reuse and examples to follow, in `CLAUDE.md` + `.claude/rules/` or `AGENTS.md` + `.mhk/rules/` | `/mhk:rules`<br>`/mhk:rules-add` | `$mhk-rules`<br>`$mhk-rules-add` |
 | **Memory** | Decisions and lessons the code can't show, shared in `.mhk/memory/` | `/mhk:memory` | `$mhk-memory` |
-| **Doctor** (all layers) | A read-only check of what's set up, broken or stale | `/mhk:doctor` | `$mhk-doctor` |
 
 More layers are planned; see [What's next](#whats-next).
+
+Two more commands work across all layers. They maintain what the layers wrote and add nothing your agent reads:
+
+| Command | What it does | Claude Code | Codex |
+| --- | --- | --- | --- |
+| **Doctor** | A read-only check of what's set up, broken or stale | `/mhk:doctor` | `$mhk-doctor` |
+| **Migrate** | After an mhk update, brings existing mhk files to the new format without rescanning | `/mhk:migrate` | `$mhk-migrate` |
 
 ## See it on a sample repo
 
@@ -104,7 +110,7 @@ codex plugin add mhk@minimal-harness-kit-codex
 
 Then work inside your project: in Claude Code run `/reload-plugins` first; in Codex start a new session.
 
-Start with `/mhk:rules` (`$mhk-rules` in Codex): review the proposed diff and commit it. Run `/mhk:memory` once to turn on team memory; from then on, the agent offers to save lasting facts as you work. Rerun either as the project changes. Commands run only when you type them.
+Start with `/mhk:rules` (`$mhk-rules` in Codex): review the proposed diff and commit it. Run `/mhk:memory` once to turn on team memory; from then on, the agent offers to save lasting facts as you work. Rerun either as the project changes. After updating mhk, run `/mhk:migrate` once per repository. Commands run only when you type them.
 
 [Team installation and updates →](docs/INSTALL.md) · [Rules and memory in depth →](docs/RULES_AND_MEMORY.md)
 
@@ -130,7 +136,7 @@ flowchart LR
 - **One method, two agents.** Both plugins are built from one shared source, with concrete instructions for each host.
 - **Checked builds.** The build rejects broken templates and references; CI fails when committed packages drift from source.
 - **Explicit invocation.** Commands never start themselves (`disable-model-invocation`, `allow_implicit_invocation: false`).
-- **Ownership travels with the file.** `mhk` changes only blocks and files it marked as its own; there's no state file.
+- **Ownership travels with the file.** `mhk` changes only blocks and files it marked as its own. The only side file, `.mhk/version.json`, records which mhk version each platform's files follow.
 
 [Design principles →](docs/DESIGN.md) · [Architecture →](docs/ARCHITECTURE.md)
 

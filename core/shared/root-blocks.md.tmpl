@@ -11,4 +11,4 @@ mhk writes to `{{root_file}}` only inside its own marked blocks, and each block 
 - Everything outside mhk blocks is human-authored: preserve it, and read it as policy/context.
 - Blocks keep this order: rules, then memory. Place a missing block after any mhk block that comes before it in this order, otherwise at the end of the file. Create `{{root_file}}` if it does not exist.
 - Validate your block's markers before writing. A duplicate, mixed, or unmatched pair is a conflict: stop and ask.
-- The rules block's older markers — `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` and `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` — still mark the rules block. Only the full rules workflow upgrades them, as a separately labelled line in its approved diff.
+- Older markers still mark mhk files: `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` and `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` for the rules block, and the trailer `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` on topic files. Read them as owned; only {{migrate_command}} converts them, and every workflow writes only the current forms.

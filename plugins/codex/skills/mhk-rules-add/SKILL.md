@@ -30,11 +30,37 @@ mhk writes to `AGENTS.md` only inside its own marked blocks, and each block belo
 - Everything outside mhk blocks is human-authored: preserve it, and read it as policy/context.
 - Blocks keep this order: rules, then memory. Place a missing block after any mhk block that comes before it in this order, otherwise at the end of the file. Create `AGENTS.md` if it does not exist.
 - Validate your block's markers before writing. A duplicate, mixed, or unmatched pair is a conflict: stop and ask.
-- The rules block's older markers — `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` and `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` — still mark the rules block. Only the full rules workflow upgrades them, as a separately labelled line in its approved diff.
+- Older markers still mark mhk files: `<!-- mhk:managed:begin -->` … `<!-- mhk:managed:end -->` and `<!-- BEGIN: ai-guide -->` … `<!-- END: ai-guide -->` for the rules block, and the trailer `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` on topic files. Read them as owned; only `$mhk-migrate` converts them, and every workflow writes only the current forms.
 
-On this fast path, write only inside the rules block; if it is absent, propose a minimal one. Preserve older rules-block markers here instead of upgrading them.
+### Version file: `.mhk/version.json`
 
-Topic files under `.mhk/rules/` must start with `paths:` frontmatter and end with `<!-- mhk:generated -->`. Recognize the legacy `<!-- mhk:generated - managed by /mhk:rules; edits may be overwritten -->` trailer as owned; preserve it on existing files. Never overwrite an unmarked topic; use a non-colliding destination or resolve the conflict. Keep scopes accurate and preserve other rules.
+`.mhk/version.json` records, per platform, the mhk version that platform's mhk files were last migrated to. It is committed with them, and holds versions only:
+
+```json
+{ "claude": "0.3.0", "codex": "0.3.0" }
+```
+
+- This platform's key is `codex`, and the installed mhk is 0.3.0. Read and write only this key; keep the other platform's entry unchanged.
+- This platform's mhk files are the mhk blocks in `AGENTS.md` and the owned topics in `.mhk/rules/`, in their current or older markers. The shared `.mhk/memory/` store does not count.
+- Migration notes ship for these layers. A note is pending when this platform has no entry, or when the note's version is newer than the entry.
+
+| Layer | Migration notes |
+| --- | --- |
+| rules | 0.3.0 |
+| memory | none |
+
+Check the version file before any scan or draft:
+
+- This platform has mhk files but no entry → stop: they predate version tracking; run `$mhk-migrate` first.
+- The entry is newer than 0.3.0 → stop: a newer mhk wrote these files; update mhk first.
+- A note for the layer you write is pending → stop: run `$mhk-migrate` first.
+- The file isn't valid JSON, or the entry isn't a version → stop and ask the user to fix it.
+
+Otherwise continue and leave the entry unchanged: only `$mhk-migrate` moves it. The exception is a platform's first mhk files: when this platform has no mhk files and no entry, add the entry with 0.3.0 to the same diff, creating the file if it is missing.
+
+On this fast path, write only inside the rules block; if it is absent, propose a minimal one.
+
+Topic files under `.mhk/rules/` must start with `paths:` frontmatter and end with `<!-- mhk:generated -->`. Never overwrite an unmarked topic; use a non-colliding destination or resolve the conflict. Keep scopes accurate and preserve other rules.
 
 For every `.mhk/rules/` document, add a row to the `### Detailed rules and catalogs` table in `AGENTS.md`: the finding's `task` (including creating new files), optional path predicate from `applies_to`, specific coverage from `summary`, and a direct relative link.
 

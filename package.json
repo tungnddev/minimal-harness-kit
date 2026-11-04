@@ -1,6 +1,6 @@
 {
   "name": "minimal-harness-kit-monorepo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "license": "MIT",
   "description": "Monorepo for the Minimal Harness Kit (mhk): shared discovery, Claude and Codex plugins, and its CLI.",
